@@ -1,0 +1,14 @@
+# Changelog
+
+## 0.1.0 — unreleased
+
+Phase 1 of [the design](docs/design.md).
+
+### Added
+
+- `view3.view(data)` shows up to `n` rows in a paged table and returns
+  `data`; `view3.html(data)` returns the HTML. Ten rows a page
+  (`page_size=`), column pages for wide tables, and a scroll box with pinned
+  names and types where output scripts don't run or with `pages=False`.
+- polars DataFrames, LazyFrames and Series, pandas DataFrames and Series, and
+  any object with a `__view3__(n)` method.

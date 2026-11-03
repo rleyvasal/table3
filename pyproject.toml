@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=77.0.3", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "view3"
+dynamic = ["version"]
+description = "Paged, theme-aware tables in notebook output: shared by tidy3, tidy3a and stats3"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Rigoberto Leyva Salmeron" }]
+keywords = ["notebooks", "jupyter", "polars", "tables", "viewer"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Framework :: IPython",
+  "Framework :: Jupyter",
+  "Programming Language :: Python :: 3",
+]
+# Polars formats the values; pandas frames are read without importing pandas.
+# IPython is optional and imported only to show a table in a notebook.
+dependencies = [
+  "polars>=1.39",
+]
+
+[project.optional-dependencies]
+# pandas and pyarrow: the pandas input tests.
+dev = ["pytest>=7.0", "ipython>=8.0", "pandas>=2.1.4", "pyarrow>=15.0"]
+
+[project.urls]
+Homepage = "https://github.com/rleyvasal/view3"
+
+[tool.setuptools.dynamic]
+version = { attr = "view3.__version__.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+view3 = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "tests"]

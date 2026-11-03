@@ -1,0 +1,44 @@
+"""Write docs/check.ipynb: the cases to look at by eye in VS Code and SolveIt.
+
+    python scripts/check_notebook.py
+"""
+
+from pathlib import Path
+
+import nbformat as nbf
+
+PENGUINS = (
+    '"https://raw.githubusercontent.com/allisonhorst/palmerpenguins/main/'
+    'inst/extdata/penguins.csv"'
+)
+
+cells = [
+    ("md", "# view3 check\nRun all, then page through each table in your "
+           "notebook's dark and light themes."),
+    ("code", "import polars as pl\nimport view3\n\n"
+             f"penguins = pl.read_csv({PENGUINS}, null_values=\"NA\")"),
+    ("md", "## Every distinct value, paged"),
+    ("code", 'view3.view(penguins.select("body_mass_g").unique().sort("body_mass_g"));'),
+    ("md", "## The same as a scroll box (`pages=False`)"),
+    ("code", 'view3.view(penguins.select("body_mass_g").unique().sort("body_mass_g"), '
+             "pages=False, height=300);"),
+    ("md", "## Wide: column pages"),
+    ("code", "view3.view(penguins.with_columns(\n"
+             '    bill_ratio=pl.col("bill_length_mm") / pl.col("bill_depth_mm"),\n'
+             '    mass_kg=pl.col("body_mass_g") / 1000,\n'
+             '    label=pl.concat_str("species", "island", "sex", separator=" / "),\n'
+             '    note=pl.lit("a long note that goes past forty characters, cut with a hover"),\n'
+             "));"),
+    ("md", "## Row limit, bigger pages, empty"),
+    ("code", "view3.view(penguins, n=100, page_size=25);"),
+    ("code", 'view3.view(penguins.filter(pl.col("body_mass_g") > 99999));'),
+    ("md", "## Viewing returns the data unchanged"),
+    ("code", "before = penguins.clone()\nview3.view(penguins).equals(before)"),
+]
+
+nb = nbf.v4.new_notebook()
+nb.cells = [
+    nbf.v4.new_markdown_cell(s) if kind == "md" else nbf.v4.new_code_cell(s)
+    for kind, s in cells
+]
+nbf.write(nb, Path(__file__).resolve().parent.parent / "docs" / "check.ipynb")
