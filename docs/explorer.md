@@ -1,7 +1,6 @@
 # A data explorer: `table3.view()`
 
-Status: accepted 2026-11-03; phase 1 implemented in table3 0.4.0, not yet
-released.
+Status: accepted 2026-11-03; phase 1 released in table3 0.4.0.
 
 A printed frame shows as a paged table (design.md). R has a second way to
 look at data: `View(df)` opens RStudio's data viewer, a spreadsheet-like
