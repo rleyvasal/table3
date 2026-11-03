@@ -1,7 +1,7 @@
 # A shared package for viewing tables in notebooks
 
 Status: accepted 2026-11-02; phase 1 (§6) released in view3 0.1.0; `digits=` (§2.1)
-in 0.2.0, not yet released.
+in 0.2.0.
 
 tidy3 previews show ten rows. To see more, a notebook user had to `pull()` a
 column and call `.to_list()` on the parenthesized pipe, losing column names,
