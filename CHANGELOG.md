@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 — unreleased
+## 0.1.0 — 2026-11-02
 
 Phase 1 of [the design](docs/design.md).
 
