@@ -17,11 +17,13 @@ penguins = pl.read_csv(
 view3.view(penguins);                           # ten rows a page, every row up to n=1000
 view3.view(penguins, page_size=25);             # bigger pages
 view3.view(penguins, pages=False, height=300);  # one box that scrolls
+view3.view(penguins, digits=4);                 # four significant digits
 ```
 
 Column names and types sit in the header, missing values show as `null`,
-floats print as polars' text preview prints them, and long values are cut
-with the full value on hover. Wide tables show as many columns as fit, with
+floats print as polars' text preview prints them (or to `digits=`
+significant digits, or `digits="full"`), and long values are cut with the
+full value on hover. Wide tables show as many columns as fit, with
 arrows to the rest. The table follows the notebook's light or dark theme in
 VS Code, JupyterLab and SolveIt.
 

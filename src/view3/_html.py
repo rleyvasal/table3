@@ -65,6 +65,7 @@ def table_html(
     pages: bool,
     page_size: int,
     height: int | None,
+    digits: int | str | None = None,
 ) -> str:
     """*df* is the first rows; *total* the whole row count, None if not counted."""
 
@@ -78,7 +79,7 @@ def table_html(
     )
     body = [
         _tr([cell(v) for v in row], CELL, ZEBRA if i % 2 else "")
-        for i, row in enumerate(display_rows(df))
+        for i, row in enumerate(display_rows(df, digits))
     ]
 
     shape = f"shape: ({'?' if total is None else total}, {df.width})"

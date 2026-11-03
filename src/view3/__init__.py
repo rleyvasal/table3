@@ -59,7 +59,7 @@ def _positive_int(value: Any) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and value > 0
 
 
-def _check(n: Any, pages: Any, page_size: Any, height: Any) -> None:
+def _check(n: Any, pages: Any, page_size: Any, height: Any, digits: Any) -> None:
     if not isinstance(n, int) or isinstance(n, bool) or n < 0:
         raise ValueError("view3: n must be a non-negative integer")
     if not isinstance(pages, bool):
@@ -68,6 +68,8 @@ def _check(n: Any, pages: Any, page_size: Any, height: Any) -> None:
         raise ValueError("view3: page_size must be a positive integer")
     if height is not None and not _positive_int(height):
         raise ValueError("view3: height must be a positive integer or None")
+    if digits is not None and digits != "full" and not _positive_int(digits):
+        raise ValueError('view3: digits must be a positive integer, "full", or None')
 
 
 def html(
@@ -77,16 +79,23 @@ def html(
     pages: bool = True,
     page_size: int = 10,
     height: int | None = 300,
+    digits: int | str | None = None,
     caption: str | None = None,
 ) -> str:
     """The table's HTML for the first *n* rows of *data*.
 
     *page_size* rows show per page. ``pages=False``, or a notebook that
     doesn't run output scripts, shows every row instead in a box *height*
-    pixels tall that scrolls; ``height=None`` grows it to fit. *caption*
-    replaces the one ``__view3__`` gives.
+    pixels tall that scrolls; ``height=None`` grows it to fit.
+
+    Floats print as polars' text preview prints them (up to six decimals,
+    following ``pl.Config(float_precision=)``) unless *digits* says
+    otherwise: ``digits=6`` keeps six significant digits, as R's
+    ``signif()`` does, so small numbers keep their precision (0.000123457);
+    ``digits="full"`` shows every stored digit. *caption* replaces the one
+    ``__view3__`` gives.
     """
-    _check(n, pages, page_size, height)
+    _check(n, pages, page_size, height, digits)
     df, total, own_caption = _parts(data, n)
     return table_html(
         df,
@@ -96,12 +105,15 @@ def html(
         pages=pages,
         page_size=page_size,
         height=height,
+        digits=digits,
     )
 
 
-def _text(data: Any, n: int) -> str:
+def _text(data: Any, n: int, digits: int | str | None = None) -> str:
     df, total, caption = _parts(data, n)
-    with pl.Config(tbl_rows=max(df.height, 1), tbl_hide_dataframe_shape=True):
+    # Polars prints no significant digits; digits=k applies to the table only.
+    full = {"fmt_float": "full"} if digits == "full" else {}
+    with pl.Config(tbl_rows=max(df.height, 1), tbl_hide_dataframe_shape=True, **full):
         lines = [f"shape: ({'?' if total is None else total}, {df.width})", repr(df)]
     if caption:
         lines.insert(0, caption)
@@ -117,6 +129,7 @@ def view(
     pages: bool = True,
     page_size: int = 10,
     height: int | None = 300,
+    digits: int | str | None = None,
     caption: str | None = None,
 ) -> Any:
     """Show up to *n* rows of *data* in a paged table and return *data*.
@@ -125,7 +138,7 @@ def view(
     text. As a cell's last line the notebook also prints *data* itself; end
     the line with ``;`` to hide it.
     """
-    _check(n, pages, page_size, height)
+    _check(n, pages, page_size, height, digits)
     try:
         from IPython import get_ipython
         from IPython.display import HTML, display
@@ -133,7 +146,7 @@ def view(
         get_ipython = None
     if get_ipython is not None and get_ipython() is not None:
         options = {"n": n, "pages": pages, "page_size": page_size, "height": height}
-        display(HTML(html(data, caption=caption, **options)))
+        display(HTML(html(data, digits=digits, caption=caption, **options)))
     else:
-        print(_text(data, n))
+        print(_text(data, n, digits))
     return data

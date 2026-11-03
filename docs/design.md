@@ -1,6 +1,7 @@
 # A shared package for viewing tables in notebooks
 
-Status: accepted 2026-11-02; phase 1 (§6) released in view3 0.1.0.
+Status: accepted 2026-11-02; phase 1 (§6) released in view3 0.1.0; `digits=` (§2.1)
+in 0.2.0, not yet released.
 
 tidy3 previews show ten rows. To see more, a notebook user had to `pull()` a
 column and call `.to_list()` on the parenthesized pipe, losing column names,
@@ -24,7 +25,8 @@ at, and none of them should depend on another to do it.
 - A table of the first *n* rows (default 1,000), names and types in the
   header, as tidy3's notebook table prints them; `null` for missing values;
   floats as polars' text preview prints them (`3.3`, `1.2346e8`), following
-  `pl.Config(float_precision=)`; values longer than 40 characters cut with
+  `pl.Config(float_precision=)`, unless `digits=` asks for significant
+  digits (§2.1); values longer than 40 characters cut with
   "…", the full value on hover.
 - Ten rows a page (`page_size=`), Previous / page numbers / Next, and as many
   columns as fit the cell with `◂ columns` / `columns ▸` for the rest. Column
@@ -33,6 +35,18 @@ at, and none of them should depend on another to do it.
 - The footer counts rows and columns ("21–30 of 344 rows | 10–12 of 12
   columns") and says when *n* cut the rows ("1,000 rows (first 1,000 of
   52,341, n=1,000)").
+
+### 2.1 Float digits
+
+Polars' preview keeps up to six decimal places, so `0.000123456789` shows as
+`0.000123`, and its `float_precision` counts decimal places, which turns
+small numbers into `0.00`. `digits=k` instead keeps *k* significant digits,
+as R's `signif()` and tibble's `pillar.sigfig` count them: `0.000123457`,
+`1.5e-7`, `1.23457e8` for `digits=6`, written as polars writes floats (`2.0`,
+an exponent without `+` or a leading zero). `digits="full"` is polars'
+`fmt_float="full"`: every stored digit, float noise included. Text output
+outside a notebook takes `"full"` but not *k*, since polars prints no
+significant digits and converting the column would print its type as `str`.
 
 ## 3. Where it runs
 
@@ -59,8 +73,8 @@ at, and none of them should depend on another to do it.
 ## 4. Interface
 
 ```python
-view3.view(data, *, n=1000, pages=True, page_size=10, height=300, caption=None)  # shows, returns data
-view3.html(data, *, n=1000, pages=True, page_size=10, height=300, caption=None)  # the HTML
+view3.view(data, *, n=1000, pages=True, page_size=10, height=300, digits=None, caption=None)  # shows, returns data
+view3.html(data, *, n=1000, pages=True, page_size=10, height=300, digits=None, caption=None)  # the HTML
 ```
 
 *data* is a polars DataFrame, LazyFrame or Series (a LazyFrame's first *n*

@@ -90,6 +90,49 @@ def test_floats_as_text_preview():
         assert ">1.90<" in view3.html(df)
 
 
+def _float_cells(html: str) -> list[str]:
+    return re.findall(r"<td style='[^']*'>([^<]*)</td>", html.split("<tbody>")[1])
+
+
+SMALL = pl.DataFrame(
+    {"x": [0.000123456789, 1.5e-7, 2.5e-12, 1.9015544041450778, 123456789.123,
+           2.0, -0.5, float("nan"), float("inf"), None]}
+)
+
+
+def test_digits_significant_keeps_small_numbers():
+    assert _float_cells(view3.html(SMALL, digits=6)) == [
+        "0.000123457", "1.5e-7", "2.5e-12", "1.90155", "1.23457e8",
+        "2.0", "-0.5", "NaN", "inf", "null",
+    ]
+    assert _float_cells(view3.html(SMALL, digits=2))[:4] == [
+        "0.00012", "1.5e-7", "2.5e-12", "1.9",
+    ]
+
+
+def test_digits_default_and_full():
+    default = _float_cells(view3.html(SMALL))
+    assert default[:2] == ["0.000123", "1.5000e-7"]
+    full = _float_cells(view3.html(SMALL, digits="full"))
+    assert full[:5] == [
+        "0.000123456789", "0.00000015", "0.0000000000025", "1.9015544041450778",
+        "123456789.123",
+    ]
+
+
+def test_digits_leave_other_columns_and_float32():
+    df = pl.DataFrame({"i": [123456789], "s": ["0.123456789"],
+                       "f": pl.Series([0.1], dtype=pl.Float32)})
+    assert _float_cells(view3.html(df, digits=3)) == ["123456789", "0.123456789", "0.1"]
+
+
+def test_digits_in_text_output(capsys):
+    view3.view(SMALL.head(1), digits="full")
+    assert "0.000123456789" in capsys.readouterr().out
+    view3.view(SMALL.head(1), digits=3)  # polars prints its own floats
+    assert "f64" in capsys.readouterr().out
+
+
 def test_empty():
     html = view3.html(pl.DataFrame({"x": []}, schema={"x": pl.Int64}))
     assert _body_rows(html) == 0
@@ -157,3 +200,6 @@ def test_arguments_checked():
         view3.view(pl.DataFrame({"x": [1]}), height=0)
     with pytest.raises(TypeError):
         view3.view(pl.DataFrame({"x": [1]}), pages="yes")
+    for bad in (0, True, 2.5, "all"):
+        with pytest.raises(ValueError, match="digits"):
+            view3.html(pl.DataFrame({"x": [1.0]}), digits=bad)

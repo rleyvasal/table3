@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0 — unreleased
+
+### Added
+
+- `digits=` chooses how floats print. `digits=6` keeps six significant
+  digits, as R's `signif()` does, so small numbers keep their precision
+  (`0.000123457`, `1.5e-7`) where the default shows `0.000123`;
+  `digits="full"` shows every stored digit. The default, `None`, prints as
+  polars' text preview does, as before.
+
 ## 0.1.0 — 2026-11-02
 
 Phase 1 of [the design](docs/design.md).
