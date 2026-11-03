@@ -41,8 +41,16 @@ sort and filters on them.
 sends each search, sort or filter to polars and gets one screen of rows
 back, so it explores any number of rows lazily. It needs a live kernel and
 shows nothing in a saved notebook, and SolveIt's and CRAFT's support for
-widgets is unknown. It would be an optional extra (`table3[explore]`), and a
-probe like the script probe decides whether to build it.
+widgets was unknown. It would be an optional extra (`table3[explore]`), and a
+probe like the script probe decided whether to build it.
+
+Probed 2026-11-03: SolveIt does not draw Jupyter widgets. An anywidget whose
+button sends a click to the kernel printed as its text,
+`<__main__.Probe object at 0x…>`, with no button, so a widget has no kernel
+connection there. The kernel-backed mode is not built: the in-browser
+explorer is the only one, and `n=` is how to explore more rows. A widget
+mode for VS Code and Jupyter alone would split the explorer by notebook, so
+it waits for a need that `n=` can't meet.
 
 ## 3. Interface
 
@@ -122,5 +130,6 @@ saying the explorer needs output scripts.
 1. table3 0.4.0: `table3.view()` in the browser (§2, §4–§6).
 2. tidy3: the `view()` verb and method, reference docs, release.
 3. Probe SolveIt and CRAFT for widgets; if they work and in-browser limits
-   bite, a kernel-backed mode as `table3[explore]`.
+   bite, a kernel-backed mode as `table3[explore]`. Done 2026-11-03: SolveIt
+   does not draw widgets (§2), so there is no kernel-backed mode.
 4. tidy3a and stats3: document `table3.view(x)`.
