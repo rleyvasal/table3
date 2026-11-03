@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0 — unreleased
+
+### Changed
+
+- `view3.view()` is `view3.show()`, and `view()` is removed: the name is
+  kept for a data explorer, as R's `View()` opens one, while this table is
+  how R notebooks print a data frame. Nothing used `view()` yet.
+- The footer no longer names `n=`: "1–10 of 100 rows (first 100 of 344)".
+  A package showing the table as its frames' notebook display sets *n*
+  itself.
+
 ## 0.2.0 — 2026-11-02
 
 ### Added

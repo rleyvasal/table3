@@ -44,8 +44,8 @@ def test_header_and_types_pinned(islands):
 def test_row_limit_labelled():
     html = view3.html(pl.DataFrame({"x": range(2500)}), n=1000)
     assert _body_rows(html) == 1000
-    assert "showing first 1,000 of 2,500 rows (n=1,000)" in html
-    assert "data-label='1,000 rows (first 1,000 of 2,500, n=1,000)'" in html
+    assert "showing first 1,000 of 2,500 rows<" in html
+    assert "data-label='1,000 rows (first 1,000 of 2,500)'" in html
     assert "shape: (2500, 1)" in html
 
 
@@ -61,7 +61,7 @@ def test_view3_hook_gives_rows_count_and_caption():
     assert ">Frame (view)<" in html
     assert "shape: (?, 1)" in html
     assert "showing first 10 of more rows" in html
-    assert "(first 10 of more, n=10)" in html
+    assert "(first 10 of more)" in html
     assert ">Mine<" in view3.html(frame, caption="Mine")
 
 
@@ -127,9 +127,9 @@ def test_digits_leave_other_columns_and_float32():
 
 
 def test_digits_in_text_output(capsys):
-    view3.view(SMALL.head(1), digits="full")
+    view3.show(SMALL.head(1), digits="full")
     assert "0.000123456789" in capsys.readouterr().out
-    view3.view(SMALL.head(1), digits=3)  # polars prints its own floats
+    view3.show(SMALL.head(1), digits=3)  # polars prints its own floats
     assert "f64" in capsys.readouterr().out
 
 
@@ -174,32 +174,33 @@ def test_pages_off_is_the_scroll_box(islands):
     assert "max-height:300px" in html
 
 
-def test_view_returns_data_unchanged(capsys):
+def test_show_returns_data_unchanged(capsys):
     df = pl.DataFrame({"x": [3, 1, 2], "y": ["a", "b", None]})
     before = df.clone()
-    assert view3.view(df) is df
+    assert view3.show(df) is df
     assert df.equals(before)
     out = capsys.readouterr().out  # text outside a notebook
     assert "shape: (3, 2)" in out and "│ 3" in out
 
 
-def test_view_text_labels_the_limit(capsys):
+def test_show_text_labels_the_limit(capsys):
     frame = Frame(pl.DataFrame({"x": range(50)}))
-    assert view3.view(frame, n=5) is frame
+    assert view3.show(frame, n=5) is frame
     out = capsys.readouterr().out
     assert out.startswith("Frame (view)\nshape: (50, 1)")
-    assert "… first 5 rows (n=5)" in out
+    assert "… first 5 rows" in out
 
 
 def test_arguments_checked():
     with pytest.raises(ValueError):
         view3.html(pl.DataFrame({"x": [1]}), n=-1)
     with pytest.raises(ValueError):
-        view3.view(pl.DataFrame({"x": [1]}), page_size=0)
+        view3.show(pl.DataFrame({"x": [1]}), page_size=0)
     with pytest.raises(ValueError):
-        view3.view(pl.DataFrame({"x": [1]}), height=0)
+        view3.show(pl.DataFrame({"x": [1]}), height=0)
     with pytest.raises(TypeError):
-        view3.view(pl.DataFrame({"x": [1]}), pages="yes")
+        view3.show(pl.DataFrame({"x": [1]}), pages="yes")
     for bad in (0, True, 2.5, "all"):
         with pytest.raises(ValueError, match="digits"):
             view3.html(pl.DataFrame({"x": [1.0]}), digits=bad)
+

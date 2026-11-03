@@ -40,20 +40,20 @@ def _plural(k: int) -> str:
     return f"{k:,} row" + ("s" if k != 1 else "")
 
 
-def rows_label(shown: int, total: int | None, n: int) -> str:
-    """Footer for the scroll box: "35 rows", or how the n limit cut them."""
+def rows_label(shown: int, total: int | None) -> str:
+    """Footer for the scroll box: "35 rows", or how many of how many show."""
     if total is not None and total <= shown:
         return _plural(total)
     of = "more" if total is None else f"{total:,}"
-    return f"showing first {shown:,} of {of} rows (n={n:,})"
+    return f"showing first {shown:,} of {of} rows"
 
 
-def pages_label(shown: int, total: int | None, n: int) -> str:
-    """What the pager counts rows of: "344 rows", or the first n of more."""
+def pages_label(shown: int, total: int | None) -> str:
+    """What the pager counts rows of: "344 rows", or the first 100 of more."""
     if total is not None and total <= shown:
         return _plural(shown)
     of = "more" if total is None else f"{total:,}"
-    return f"{_plural(shown)} (first {shown:,} of {of}, n={n:,})"
+    return f"{_plural(shown)} (first {shown:,} of {of})"
 
 
 def table_html(
@@ -61,7 +61,6 @@ def table_html(
     total: int | None,
     caption: str | None,
     *,
-    n: int,
     pages: bool,
     page_size: int,
     height: int | None,
@@ -98,7 +97,7 @@ def table_html(
     pager = script = ""
     if pages:
         uid = f"view3-{uuid.uuid4().hex}"
-        label = _html.escape(pages_label(df.height, total, n))
+        label = _html.escape(pages_label(df.height, total))
         root = f"<div id='{uid}' data-page-size='{page_size}' data-label='{label}'>"
         pager = (
             f"<div data-pager style='font:{MONO};margin:4px 0 0 0;display:none'>"
@@ -119,7 +118,7 @@ def table_html(
         + "".join(body)
         + "</tbody></table></div>"
         f"<small data-foot style='{small}'>"
-        f"{rows_label(df.height, total, n)}</small>"
+        f"{rows_label(df.height, total)}</small>"
         + pager
         + "</div>"
         + script

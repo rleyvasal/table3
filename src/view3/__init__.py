@@ -1,9 +1,10 @@
 """Paged, theme-aware tables in notebook output.
 
-``view3.view(data)`` shows up to *n* rows ten at a time, with Previous /
-page / Next buttons and, for wide data, as many columns as fit the cell plus
-arrows to the rest. It returns *data* unchanged. ``view3.html(data)`` returns
-the same HTML without showing it.
+``view3.html(data)`` is a table of up to *n* rows shown ten at a time, with
+Previous / page / Next buttons and, for wide data, as many columns as fit
+the cell plus arrows to the rest: what a package returns from its frames'
+``_repr_html_`` so they print as R notebooks print data frames.
+``view3.show(data)`` displays the same table and returns *data* unchanged.
 
 *data* is a polars DataFrame, LazyFrame or Series, a pandas DataFrame or
 Series, or any object with a ``__view3__`` method::
@@ -24,7 +25,7 @@ import polars as pl
 from view3.__version__ import __version__
 from view3._html import table_html
 
-__all__ = ["__version__", "html", "view"]
+__all__ = ["__version__", "html", "show"]
 
 
 def _from_pandas(df: Any) -> pl.DataFrame:
@@ -101,7 +102,6 @@ def html(
         df,
         total,
         own_caption if caption is None else caption,
-        n=n,
         pages=pages,
         page_size=page_size,
         height=height,
@@ -118,11 +118,11 @@ def _text(data: Any, n: int, digits: int | str | None = None) -> str:
     if caption:
         lines.insert(0, caption)
     if total is None or total > df.height:
-        lines.append(f"… first {df.height:,} rows (n={n:,})")
+        lines.append(f"… first {df.height:,} rows")
     return "\n".join(lines)
 
 
-def view(
+def show(
     data: Any,
     *,
     n: int = 1000,
@@ -150,3 +150,4 @@ def view(
     else:
         print(_text(data, n, digits))
     return data
+

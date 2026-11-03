@@ -1,6 +1,7 @@
 # view3
 
-Paged, theme-aware tables in notebook output. It is the shared viewer of
+Paged, theme-aware tables in notebook output, the way R notebooks print a
+data frame. It is the shared table display of
 [tidy3](https://github.com/rleyvasal/tidy3),
 [tidy3a](https://github.com/rleyvasal/tidy3a) and
 [stats3](https://github.com/rleyvasal/stats3), released on its own so each
@@ -14,10 +15,10 @@ penguins = pl.read_csv(
     "https://raw.githubusercontent.com/allisonhorst/palmerpenguins/main/inst/extdata/penguins.csv",
     null_values="NA",
 )
-view3.view(penguins);                           # ten rows a page, every row up to n=1000
-view3.view(penguins, page_size=25);             # bigger pages
-view3.view(penguins, pages=False, height=300);  # one box that scrolls
-view3.view(penguins, digits=4);                 # four significant digits
+view3.show(penguins);                           # ten rows a page, every row up to n=1000
+view3.show(penguins, page_size=25);             # bigger pages
+view3.show(penguins, pages=False, height=300);  # one box that scrolls
+view3.show(penguins, digits=4);                 # four significant digits
 ```
 
 Column names and types sit in the header, missing values show as `null`,
@@ -27,21 +28,26 @@ full value on hover. Wide tables show as many columns as fit, with
 arrows to the rest. The table follows the notebook's light or dark theme in
 VS Code, JupyterLab and SolveIt.
 
-`view()` returns what it was given, so it can sit in the middle of a pipe.
+`show()` returns what it was given, so it can sit in the middle of a pipe.
 As a cell's last line the notebook also prints that value; end the line with
 `;` to hide it.
 
-## Your own objects
+## Your own frames
 
-An object with a `__view3__` method shows without view3 importing its
-package:
+A package makes its frames print this way by returning `view3.html(self)`
+from `_repr_html_`. An object with a `__view3__` method shows without view3
+importing its package:
 
 ```python
 def __view3__(self, n):
     return first_n_rows_as_polars, total_rows_or_None, "caption or None"
+
+def _repr_html_(self):
+    return view3.html(self, n=100)
 ```
 
 ## More
 
 [docs/design.md](docs/design.md) records the design and what each package
-adds.
+adds. `view3.view()` was 0.1 and 0.2's name for `show()`; it is gone, and
+`view` is kept for a data explorer like R's `View()`.

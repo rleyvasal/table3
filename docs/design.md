@@ -1,14 +1,22 @@
 # A shared package for viewing tables in notebooks
 
 Status: accepted 2026-11-02; phase 1 (§6) released in view3 0.1.0; `digits=` (§2.1)
-in 0.2.0.
+in 0.2.0; `show()` for `view()`, and the table as tidy3's notebook display
+(§5), in view3 0.3.0, not yet released.
 
-tidy3 previews show ten rows. To see more, a notebook user had to `pull()` a
-column and call `.to_list()` on the parenthesized pipe, losing column names,
-types and the table. view3 shows up to *n* rows in the cell's output as a
-paged table, like RStudio's paged data frames, with tidy3's formatting. It is
-its own package because tidy3, tidy3a and stats3 all produce tables to look
-at, and none of them should depend on another to do it.
+tidy3 previews showed ten rows. To see more, a notebook user had to `pull()`
+a column and call `.to_list()` on the parenthesized pipe, losing column
+names, types and the table. R notebooks print every data frame as a paged
+table (R Markdown's `df_print: paged`, `rmarkdown::paged_table()`): ten rows
+a page, up to `max.print` rows to page through. view3 is that table, with
+tidy3's formatting, for any package's `_repr_html_`. It is its own package
+because tidy3, tidy3a and stats3 all produce tables to look at, and none of
+them should depend on another to do it.
+
+The name `view` is kept for a data explorer: in R, `View(df)` opens
+RStudio's viewer, where you search, sort and filter as in a spreadsheet.
+That is not this table. view3 0.1 and 0.2 called `show()` `view()`; 0.3
+removes it, as nothing used it yet.
 
 ## 1. Precedents
 
@@ -33,8 +41,8 @@ at, and none of them should depend on another to do it.
   groups are measured once over all *n* rows, so they don't shift between
   pages, and they are regrouped when the cell's width changes.
 - The footer counts rows and columns ("21–30 of 344 rows | 10–12 of 12
-  columns") and says when *n* cut the rows ("1,000 rows (first 1,000 of
-  52,341, n=1,000)").
+  columns") and says when *n* cut the rows ("1–10 of 100 rows (first 100 of
+  52,341)").
 
 ### 2.1 Float digits
 
@@ -73,7 +81,7 @@ significant digits and converting the column would print its type as `str`.
 ## 4. Interface
 
 ```python
-view3.view(data, *, n=1000, pages=True, page_size=10, height=300, digits=None, caption=None)  # shows, returns data
+view3.show(data, *, n=1000, pages=True, page_size=10, height=300, digits=None, caption=None)  # shows, returns data
 view3.html(data, *, n=1000, pages=True, page_size=10, height=300, digits=None, caption=None)  # the HTML
 ```
 
@@ -86,25 +94,28 @@ def __view3__(self, n: int) -> tuple[polars.DataFrame, int | None, str | None]:
     """The first n rows, the whole row count (None if not counted), and a caption."""
 ```
 
-Outside a notebook `view()` prints the rows as text. As a cell's last line
-the notebook also prints what `view()` returns; `;` hides it.
+Outside a notebook `show()` prints the rows as text. As a cell's last line
+the notebook also prints what `show()` returns; `;` hides it. A package
+prints its frames as this table by returning `view3.html(self, n=…)` from
+`_repr_html_`.
 
 ## 5. Each package's part
 
 | Package | Change | Dependency |
 |---|---|---|
-| tidy3 | `TidyFrame.__view3__` from `_preview_parts` (respects `preview_count`), caption `TidyFrame (view groups=[…])`; a `view()` verb that calls `view3.view` and passes the frame through | `view3>=0.1,<0.2` |
-| stats3 | Result tables are polars, so `view3.view(table)` works as is; `report.py` may later use `view3.html` | optional at first |
+| tidy3 | `TidyFrame._repr_html_` returns `view3.html(self, n=preview_max, page_size=preview_rows, digits=preview_digits)` from `options()`; `TidyFrame.__view3__` from `_preview_parts` (respects `preview_count`), caption `TidyFrame (preview groups=[…])`. No verb: every frame in a cell prints this way | `view3>=0.3,<0.4` |
+| stats3 | Result tables are polars, so `view3.show(table)` works as is; its own result objects may return `view3.html` from `_repr_html_` | optional at first |
 | tidy3a | `TidyArray.__view3__` through `as_table` | extra `tidy3a[view]` (tidy3a has no polars) |
 | plot3, tidy3syntax | none | none |
 
-Only tidy3 exports a bare `view`; stats3 and tidy3a document `view3.view(x)`,
-so `from … import *` in any order leaves one `view`.
+None of them exports `show` or `view` bare, so `from … import *` in any order
+leaves the names alone.
 
 ## 6. Phases
 
 1. view3 0.1.0: the prototype's code without tidy3, tests, CI, release.
-2. tidy3: dependency, `__view3__`, `view()` verb, reference docs, release.
+2. tidy3: dependency, `__view3__`, the table as `_repr_html_`, reference docs,
+   release.
 3. stats3 and tidy3a: hooks and docs.
 4. Later: tidy3's ordinary notebook table formats through view3 (its floats
    print in full today); loading further rows while paging.

@@ -18,22 +18,22 @@ cells = [
     ("code", "import polars as pl\nimport view3\n\n"
              f"penguins = pl.read_csv({PENGUINS}, null_values=\"NA\")"),
     ("md", "## Every distinct value, paged"),
-    ("code", 'view3.view(penguins.select("body_mass_g").unique().sort("body_mass_g"));'),
+    ("code", 'view3.show(penguins.select("body_mass_g").unique().sort("body_mass_g"));'),
     ("md", "## The same as a scroll box (`pages=False`)"),
-    ("code", 'view3.view(penguins.select("body_mass_g").unique().sort("body_mass_g"), '
+    ("code", 'view3.show(penguins.select("body_mass_g").unique().sort("body_mass_g"), '
              "pages=False, height=300);"),
     ("md", "## Wide: column pages"),
-    ("code", "view3.view(penguins.with_columns(\n"
+    ("code", "view3.show(penguins.with_columns(\n"
              '    bill_ratio=pl.col("bill_length_mm") / pl.col("bill_depth_mm"),\n'
              '    mass_kg=pl.col("body_mass_g") / 1000,\n'
              '    label=pl.concat_str("species", "island", "sex", separator=" / "),\n'
              '    note=pl.lit("a long note that goes past forty characters, cut with a hover"),\n'
              "));"),
     ("md", "## Row limit, bigger pages, empty"),
-    ("code", "view3.view(penguins, n=100, page_size=25);"),
-    ("code", 'view3.view(penguins.filter(pl.col("body_mass_g") > 99999));'),
+    ("code", "view3.show(penguins, n=100, page_size=25);"),
+    ("code", 'view3.show(penguins.filter(pl.col("body_mass_g") > 99999));'),
     ("md", "## Viewing returns the data unchanged"),
-    ("code", "before = penguins.clone()\nview3.view(penguins).equals(before)"),
+    ("code", "before = penguins.clone()\nview3.show(penguins).equals(before)"),
 ]
 
 nb = nbf.v4.new_notebook()
