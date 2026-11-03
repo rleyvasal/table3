@@ -49,6 +49,6 @@ def _repr_html_(self):
 ## More
 
 [docs/design.md](docs/design.md) records the design and what each package
-adds. table3 was first released as view3 (0.1 and 0.2), where `show()` was
-`view()`; the name `view` is kept for a data explorer, as R's `View()`
-opens one.
+adds. table3 was first released as view3 0.1 and 0.2, where `show()` was
+`view()`, and its versions continue from them. The name `view` is kept for a
+data explorer, as R's `View()` opens one.

@@ -1,8 +1,8 @@
 # A shared package for notebook tables
 
 Status: accepted 2026-11-02. Released first as view3 (0.1.0 phase 1 of §6,
-0.2.0 `digits=` of §2.1); renamed table3 for 0.1.0, with `show()` and the
-table as tidy3's notebook display (§5), not yet released.
+0.2.0 `digits=` of §2.1); renamed table3 for 0.3.0, with `show()` and the
+table as tidy3's notebook display (§5).
 
 tidy3 previews showed ten rows. To see more, a notebook user had to `pull()`
 a column and call `.to_list()` on the parenthesized pipe, losing column
@@ -105,7 +105,7 @@ prints its frames as this table by returning `table3.html(self, n=…)` from
 
 | Package | Change | Dependency |
 |---|---|---|
-| tidy3 | `TidyFrame._repr_html_` returns `table3.html(self, n=preview_max, page_size=preview_rows, digits=preview_digits)` from `options()`; `TidyFrame.__table3__` from `_preview_parts` (respects `preview_count`), caption `TidyFrame (preview groups=[…])`. No verb: every frame in a cell prints this way | `table3>=0.1,<0.2` |
+| tidy3 | `TidyFrame._repr_html_` returns `table3.html(self, n=preview_max, page_size=preview_rows, digits=preview_digits)` from `options()`; `TidyFrame.__table3__` from `_preview_parts` (respects `preview_count`), caption `TidyFrame (preview groups=[…])`. No verb: every frame in a cell prints this way | `table3>=0.3,<0.4` |
 | stats3 | Result tables are polars, so `table3.show(table)` works as is; its own result objects may return `table3.html` from `_repr_html_` | optional at first |
 | tidy3a | `TidyArray.__table3__` through `as_table` | extra `tidy3a[view]` (tidy3a has no polars) |
 | plot3, tidy3syntax | none | none |

@@ -1,10 +1,11 @@
 # Changelog
 
-## 0.1.0 — unreleased
+## 0.3.0 — 2026-11-02
 
 table3 is view3 renamed: the table is how a frame prints in a notebook, as
-R's `print()`, and `view` is kept for a data explorer, as R's `View()`. The
-entries below 0.1.0 are view3's.
+R's `print()`, and `view` is kept for a data explorer, as R's `View()`. Its
+versions continue view3's, whose entries are below; this is table3's first
+release on PyPI.
 
 ### Changed from view3 0.2.0
 
