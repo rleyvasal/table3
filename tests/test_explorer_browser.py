@@ -67,7 +67,7 @@ def _wait_status(page, start: str) -> None:
 
 
 def _header(page, name: str):
-    return page.locator(f"[data-grid] td[title='Sort by {name}']")
+    return page.locator(f"[data-grid] td[title='Click to sort by {name}']")
 
 
 random.seed(1)
@@ -99,6 +99,22 @@ def test_sort_cycles_and_keeps_row_numbers(explore):
     assert _cells(page, _rows(page)[0])[1] == "299"
     _header(page, "x").click()
     assert _rows(page)[:3] == [1, 2, 3]
+
+
+def _arrows(page) -> list[str]:
+    return [t.strip() for t in page.eval_on_selector_all(
+        "[data-grid] thead tr:first-child td span", "ss => ss.map(s => s.textContent)")]
+
+
+def test_every_header_shows_it_sorts(explore):
+    page = explore(FRAME)
+    assert _arrows(page) == ["↕"] * 5  # before any click
+    _header(page, "species").click()
+    assert _arrows(page) == ["↕", "▲", "↕", "↕", "↕"]
+    _header(page, "species").click()
+    assert _arrows(page)[1] == "▼"
+    _header(page, "species").click()
+    assert _arrows(page) == ["↕"] * 5
 
 
 def test_nulls_sort_last_both_ways(explore):

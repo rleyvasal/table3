@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.1 — unreleased
+
+### Fixed
+
+- The explorer's headers show that they sort before the first click: a
+  faint ↕ beside each name, which turns into ▲ or ▼ on the sorted column,
+  and "Click to sort by …" on hover.
+
 ## 0.4.0 — 2026-11-03
 
 ### Added

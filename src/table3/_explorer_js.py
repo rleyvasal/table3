@@ -104,7 +104,7 @@ EXPLORER_JS = r"""
   cols.forEach(function (col, c) {
     var td = document.createElement("td");
     td.style.cssText = cellStyle(c) + ";cursor:pointer;user-select:none";
-    td.title = "Sort by " + col.name;
+    td.title = "Click to sort by " + col.name;
     var arrow = document.createElement("span");
     arrow.style.cssText = "opacity:.55";
     var name = document.createElement("b");
@@ -226,7 +226,10 @@ EXPLORER_JS = r"""
     for (var r = 0; r < rows.length; r++) if (passes(r)) order.push(r);
     if (sortCol >= 0) order.sort(compare);
     arrows.forEach(function (a, c) {
-      a.textContent = c !== sortCol ? "" : sortDir > 0 ? " ▲ " : " ▼ ";
+      // Every header shows it sorts: a faint ↕, and ▲ or ▼ on the sorted one.
+      var on = c === sortCol;
+      a.textContent = !on ? " ↕ " : sortDir > 0 ? " ▲ " : " ▼ ";
+      a.style.opacity = on ? ".9" : ".5";
     });
     var label = order.length.toLocaleString("en-US") + " of " +
       rows.length.toLocaleString("en-US") + " rows | " + ncol + " columns";
