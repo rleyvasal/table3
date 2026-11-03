@@ -2,7 +2,7 @@
 
 Status: accepted 2026-11-02. Released first as view3 (0.1.0 phase 1 of §6,
 0.2.0 `digits=` of §2.1); renamed table3 for 0.3.0, with `show()` and the
-table as tidy3's notebook display (§5).
+table as tidy3's notebook display (§5), which tidy3 0.18.0 uses (phase 2).
 
 tidy3 previews showed ten rows. To see more, a notebook user had to `pull()`
 a column and call `.to_list()` on the parenthesized pipe, losing column
@@ -119,5 +119,6 @@ leaves the names alone.
 2. tidy3: dependency, `__table3__`, the table as `_repr_html_`, reference docs,
    release.
 3. stats3 and tidy3a: hooks and docs.
-4. Later: tidy3's ordinary notebook table formats through table3 (its floats
-   print in full today); loading further rows while paging.
+4. Later: loading further rows while paging.
+5. A data explorer, `table3.view()`, as R's `View()`: planned in
+   [explorer.md](explorer.md).
