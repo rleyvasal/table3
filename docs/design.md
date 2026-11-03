@@ -76,9 +76,13 @@ significant digits and converting the column would print its type as `str`.
   scripts don't run, the table stays a box `height` pixels tall (default
   300) that scrolls both ways under a pinned header. `pages=False` asks for
   that box everywhere.
-- **Size.** Every cell carries its style, about 100 bytes a cell: 1,000 rows
-  of 12 columns add about 1.2 MB to a saved notebook. The font is set once
-  on the table to halve that.
+- **Size.** A styled cell is about 100 bytes, and SolveIt sends a cell's
+  output to its AI, so a paged table writes only its first page as cells
+  and every row as compact JSON, which its script draws into the other
+  pages (0.5.0): `penguins`, 8 columns of 100 rows, is 23 KB, not 86 KB.
+  Without scripts the first page shows. `pages=False` writes every row as
+  cells, about 1.2 MB for 1,000 rows of 12 columns; the font is set once on
+  the table to halve that.
 
 ## 4. Interface
 

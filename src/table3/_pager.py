@@ -1,7 +1,8 @@
 """The script that pages a table3 table in place."""
 
 # Column widths are measured once over all rows, so a column page keeps its
-# columns whichever row page is shown. __ID__ is the table's root element.
+# columns whichever row page is shown. The rows past the first page arrive as
+# JSON and are drawn into the table first. __ID__ is the table's root element.
 PAGER_JS = """
 (function () {
   var root = document.getElementById("__ID__");
@@ -10,6 +11,29 @@ PAGER_JS = """
   var box = root.querySelector("[data-box]");
   var table = box.querySelector("table");
   var head = [].slice.call(table.tHead.rows);
+  // Only the first page is written as cells; the rest come as JSON text,
+  // drawn here with the first page's cell style ("null", cut at 40 as there).
+  var json = root.querySelector("script[type='application/json']");
+  if (json) {
+    var tb = table.tBodies[0], first = tb.rows[0] && tb.rows[0].cells[0];
+    var style = first ? first.getAttribute("style") : "";
+    var esc = function (t) {
+      return t.replace(/[&<>"']/g, function (ch) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#x27;" }[ch];
+      });
+    };
+    var cells = "";
+    JSON.parse(json.textContent).forEach(function (row) {
+      cells += "<tr>";
+      row.forEach(function (v) {
+        var t = v === null ? "null" : v, cut = t.length > 40;
+        cells += "<td style='" + style + "'" + (cut ? " title='" + esc(t) + "'" : "") + ">" +
+          esc(cut ? t.slice(0, 39) + "…" : t) + "</td>";
+      });
+      cells += "</tr>";
+    });
+    tb.innerHTML = cells;
+  }
   var body = [].slice.call(table.tBodies[0].rows);
   var foot = root.querySelector("[data-foot]");
   var pager = root.querySelector("[data-pager]");

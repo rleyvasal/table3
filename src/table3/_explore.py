@@ -4,14 +4,13 @@ plain table for notebooks that don't run output scripts (docs/explorer.md)."""
 from __future__ import annotations
 
 import html as _html
-import json
 import math
 import uuid
 
 import polars as pl
 
 from table3._explorer_js import EXPLORER_JS
-from table3._format import dtype_short, float_text
+from table3._format import dtype_short, float_text, json_for_script
 from table3._html import MONO, table_html
 
 CHOICES_MAX = 50  # a text column with at most this many values filters by pick-list
@@ -84,11 +83,6 @@ def payload(df: pl.DataFrame, total: int | None, n: int, digits: int | str | Non
     }
 
 
-def _json_for_script(obj: dict) -> str:
-    # "<" never appears raw, so a value holding "</script>" or "<!--" can't end the block.
-    return json.dumps(obj, ensure_ascii=False, allow_nan=False).replace("<", "\\u003c")
-
-
 def explorer_html(
     df: pl.DataFrame,
     total: int | None,
@@ -114,7 +108,7 @@ def explorer_html(
             f"<div style='font:{MONO};opacity:.85;margin:0 0 4px 0'>"
             f"{_html.escape(caption)}</div>"
         )
-    data = _json_for_script(payload(df, total, n, digits))
+    data = json_for_script(payload(df, total, n, digits))
     return (
         f"<div id='{uid}' data-height='{height}' style='font:{MONO}'>"
         + cap

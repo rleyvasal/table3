@@ -47,7 +47,7 @@ browser_job() {
   uv venv -q --python 3.12 "$env" &&
     uv pip install -q --python "$env/bin/python" -e ".[dev,browser]" &&
     "$env/bin/python" -m playwright install chromium > /dev/null &&
-    "$env/bin/python" -m pytest -q -p no:cacheprovider tests/test_explorer_browser.py
+    "$env/bin/python" -m pytest -q -p no:cacheprovider tests/test_explorer_browser.py tests/test_pager_browser.py
 }
 
 distributions_job() {
@@ -65,7 +65,7 @@ distributions_job() {
 for v in "${versions[@]}"; do
   run "pytest (Python $v)" pytest_job "$v"
 done
-run "explorer in headless Chromium" browser_job
+run "explorer and pages in headless Chromium" browser_job
 run "distributions" distributions_job
 
 if (( ${#failed[@]} )); then

@@ -7,9 +7,12 @@ colour (``--card``, an HSL triplet) is drawn as a gradient over a plain colour
 taken from VS Code, then JupyterLab, then the browser. Where ``--card`` is
 undefined the gradient drops out alone.
 
-Paging is a script over this table. Where output scripts don't run, the
-table stays a box of fixed height that scrolls down and sideways, with the
-column names and types pinned at the top.
+A paged table writes only its first page as styled cells, and every row
+as compact JSON beside it, which the paging script turns into the other
+pages: styled cells cost about 100 bytes each, and SolveIt sends a cell's
+output to its AI. Where output scripts don't run, the first page shows in a
+box that scrolls sideways under pinned names and types. ``pages=False``
+writes every row as styled cells, in a box of fixed height that scrolls.
 """
 
 from __future__ import annotations
@@ -19,7 +22,7 @@ import uuid
 
 import polars as pl
 
-from table3._format import cell, display_rows, dtype_short, escape
+from table3._format import cell, display_rows, dtype_short, escape, json_for_script
 from table3._pager import PAGER_JS
 
 MONO = "12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace"
@@ -76,9 +79,11 @@ def table_html(
     types = _tr(
         [escape(dtype_short(t)) for t in df.dtypes], f"{CELL};opacity:.55;{RULE}"
     )
+    rows = display_rows(df, digits)
+    written = rows[:page_size] if pages else rows
     body = [
         _tr([cell(v) for v in row], CELL, ZEBRA if i % 2 else "")
-        for i, row in enumerate(display_rows(df, digits))
+        for i, row in enumerate(written)
     ]
 
     shape = f"shape: ({'?' if total is None else total}, {df.width})"
@@ -94,7 +99,7 @@ def table_html(
         )
 
     root = "<div>"
-    pager = script = ""
+    pager = script = data = ""
     if pages:
         uid = f"table3-{uuid.uuid4().hex}"
         label = _html.escape(pages_label(df.height, total))
@@ -104,6 +109,9 @@ def table_html(
             "</div>"
         )
         script = f"<script>{PAGER_JS.replace('__ID__', uid)}</script>"
+        if len(written) < len(rows):
+            text = [[None if v is None else str(v) for v in row] for row in rows]
+            data = f"<script type='application/json'>{json_for_script(text)}</script>"
     return (
         root
         + cap
@@ -118,8 +126,9 @@ def table_html(
         + "".join(body)
         + "</tbody></table></div>"
         f"<small data-foot style='{small}'>"
-        f"{rows_label(df.height, total)}</small>"
+        f"{rows_label(len(written), total)}</small>"
         + pager
+        + data
         + "</div>"
         + script
     )

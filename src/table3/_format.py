@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html as _html
+import json
 
 import polars as pl
 
@@ -21,6 +22,15 @@ def cell(v: object) -> str:
         return escape(v)
     short = _html.escape(text[: MAX_CHARS - 1]) + "…"
     return f"<span title='{_html.escape(text)}'>{short}</span>"
+
+
+def json_for_script(obj: object) -> str:
+    """*obj* as JSON for a ``<script type="application/json">`` block.
+
+    "<" never appears raw, so a value holding "</script>" or "<!--" can't
+    end the block.
+    """
+    return json.dumps(obj, ensure_ascii=False, allow_nan=False).replace("<", "\\u003c")
 
 
 def dtype_short(t: pl.DataType) -> str:

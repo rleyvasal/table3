@@ -11,6 +11,15 @@
   session. `show()` and printed tables are not hidden. Outside SolveIt
   nothing changes.
 
+### Changed
+
+- A paged table writes only its first page as styled cells, and every row
+  as compact JSON its script draws into the other pages: about a quarter
+  of the size (a printed 8-column frame of 100 rows, 23 KB instead of
+  86 KB), which matters in SolveIt, where a cell's output goes to the AI.
+  Where scripts don't run, the first page shows. `pages=False` is
+  unchanged.
+
 ### Fixed
 
 - The explorer's headers show that they sort before the first click: a

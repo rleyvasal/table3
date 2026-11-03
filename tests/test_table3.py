@@ -1,3 +1,4 @@
+import json
 import re
 
 import polars as pl
@@ -7,7 +8,14 @@ import table3
 
 
 def _body_rows(html: str) -> int:
-    return html.split("<tbody>")[1].count("<tr")
+    """Rows written as cells: a paged table's first page, or every row."""
+    return html.split("<tbody>")[1].split("</tbody>")[0].count("<tr")
+
+
+def _json_rows(html: str) -> list:
+    """Every row of a paged table, as the JSON its script draws them from."""
+    block = re.search(r"<script type='application/json'>(.*?)</script>", html, re.S)
+    return json.loads(block.group(1)) if block else []
 
 
 @pytest.fixture
@@ -27,12 +35,34 @@ class Frame:
         return self.df.head(n), self.df.height if self.counted else None, "Frame (view)"
 
 
-def test_all_rows_shown(islands):
+def test_first_page_as_cells_every_row_as_json(islands):
     html = table3.html(islands)
-    assert _body_rows(html) == 29
-    assert "island 28" in html
+    assert _body_rows(html) == 10  # the first page, before any script runs
+    rows = _json_rows(html)
+    assert len(rows) == 29 and rows[28] == ["island 28"]
     assert "max-height:300px" in html
+    assert "showing first 10 of 29 rows<" in html  # the footer without scripts
+    assert "data-label='29 rows'" in html
+
+
+def test_one_page_or_less_needs_no_json(islands):
+    html = table3.html(islands, page_size=50)
+    assert _body_rows(html) == 29 and _json_rows(html) == []
     assert ">29 rows<" in html
+
+
+def test_json_is_a_fraction_of_the_cells():
+    df = pl.DataFrame({f"c{i}": [i * 1.5] * 100 for i in range(8)})
+    paged, cells = table3.html(df), table3.html(df, pages=False)
+    assert _body_rows(cells) == 100 and len(_json_rows(paged)) == 100
+    assert len(paged) * 3 < len(cells)
+
+
+def test_json_rows_are_display_text():
+    df = pl.DataFrame({"f": [3.3000000000000003, None], "s": ["</script>", "y" * 50]})
+    html = table3.html(df, page_size=1, digits=None)
+    # "</script>" in a value would cut the block short if it weren't escaped.
+    assert _json_rows(html) == [["3.3", "</script>"], [None, "y" * 50]]
 
 
 def test_header_and_types_pinned(islands):
@@ -43,8 +73,8 @@ def test_header_and_types_pinned(islands):
 
 def test_row_limit_labelled():
     html = table3.html(pl.DataFrame({"x": range(2500)}), n=1000)
-    assert _body_rows(html) == 1000
-    assert "showing first 1,000 of 2,500 rows<" in html
+    assert _body_rows(html) == 10 and len(_json_rows(html)) == 1000
+    assert "showing first 10 of 2,500 rows<" in html
     assert "data-label='1,000 rows (first 1,000 of 2,500)'" in html
     assert "shape: (2500, 1)" in html
 
@@ -52,6 +82,7 @@ def test_row_limit_labelled():
 def test_lazy_frame_counted():
     html = table3.html(pl.LazyFrame({"x": range(50)}), n=10)
     assert _body_rows(html) == 10 and "shape: (50, 1)" in html
+    assert _json_rows(html) == []  # ten rows: one page
 
 
 def test_table3_hook_gives_rows_count_and_caption():
