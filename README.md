@@ -40,6 +40,12 @@ table3.view(penguins);
 table3.view(penguins, n=50_000, height=600);  # more rows, a taller grid
 ```
 
+In SolveIt, which sends every cell's code and output to its AI, `view()`
+hides its cell from the AI (the red eye), so the explorer's rows don't fill
+the model's context; the cell's code is hidden with them. `view(hide=False)`
+keeps a cell visible, and `table3.autohide(False)` stops hiding for the
+session.
+
 `show()` and `view()` return what they were given, so they can sit in the
 middle of a pipe.
 As a cell's last line the notebook also prints that value; end the line with

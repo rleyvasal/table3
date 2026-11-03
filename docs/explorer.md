@@ -55,13 +55,23 @@ it waits for a need that `n=` can't meet.
 ## 3. Interface
 
 ```python
-table3.view(data, *, n=10_000, height=500, digits=None, caption=None)  # shows, returns data
+table3.view(data, *, n=10_000, height=500, digits=None, caption=None, hide=None)  # shows, returns data
+table3.autohide(on=True)  # whether view() hides its cell from SolveIt's AI
 ```
 
 *data* is anything `html()` and `show()` take, `__table3__` objects
 included. It returns *data* unchanged, like `show()`; `;` hides the
 notebook's own print of it. Outside a notebook it prints the first rows as
 `show()` does.
+
+In SolveIt, which sends each cell's code and output to its AI, `view()`
+then marks its cell hidden from the AI (`dialoghelper.update_msg(skipped=1)`,
+SolveIt's red eye), as plot3 does for plots: the rows would fill the
+model's context. SolveIt has no flag for an output alone, so the cell's code
+is hidden too; a `view()` cell is usually one line. `show()` and printed
+tables are not hidden, since most analysis cells end in a frame and hiding
+those would hide their code. `hide=False`, or `autohide(False)` for the
+session, keeps cells visible. Added in 0.5.0.
 
 tidy3 adds `view()` as a verb and method, as `glimpse()`: `penguins >> view()`,
 `view(penguins)`, `penguins.view()`, passing the frame through. It is the

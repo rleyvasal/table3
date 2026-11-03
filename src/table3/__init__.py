@@ -26,8 +26,10 @@ import polars as pl
 
 from table3.__version__ import __version__
 from table3._html import table_html
+from table3 import _solveit
+from table3._solveit import autohide
 
-__all__ = ["__version__", "html", "show", "view"]
+__all__ = ["__version__", "autohide", "html", "show", "view"]
 
 
 def _from_pandas(df: Any) -> pl.DataFrame:
@@ -167,6 +169,7 @@ def view(
     height: int = 500,
     digits: int | str | None = None,
     caption: str | None = None,
+    hide: bool | None = None,
 ) -> Any:
     """Open a data explorer over the first *n* rows of *data*, and return *data*.
 
@@ -178,8 +181,16 @@ def view(
     grid's height in pixels; *digits* and *caption* as in ``html()``. Where
     output scripts don't run, it shows the first 100 rows as ``show()``.
     Outside a notebook it prints the first rows.
+
+    In SolveIt, which sends every cell's code and output to its AI, the
+    cell is then hidden from the AI (SolveIt's red eye), so the rows don't
+    fill its context. *hide* says whether to, for this call: ``True`` or
+    ``False``; ``None`` follows ``table3.autohide()``, on by default.
+    SolveIt hides the cell's code with its output.
     """
     _check(n, True, 10, height, digits)
+    if hide is not None and not isinstance(hide, bool):
+        raise TypeError("table3: hide must be True, False or None")
     if height is None:
         raise ValueError("table3: view() height must be a positive integer")
     from table3._explore import explorer_html
@@ -191,5 +202,7 @@ def view(
     )
     if not _display(page):
         print(_text(data, min(n, 20), digits))
+    elif _solveit.AUTOHIDE if hide is None else hide:
+        _solveit.hide_calling_cell()
     return data
 

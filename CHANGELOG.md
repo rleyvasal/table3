@@ -1,6 +1,15 @@
 # Changelog
 
-## 0.4.1 — unreleased
+## 0.5.0 — unreleased
+
+### Added
+
+- In SolveIt, `view()` hides its cell from the AI (SolveIt's red eye), as
+  plot3 does for plots, so the explorer's rows don't fill the model's
+  context. SolveIt hides the cell's code with its output. `view(hide=False)`
+  keeps one cell visible, and `table3.autohide(False)` turns it off for the
+  session. `show()` and printed tables are not hidden. Outside SolveIt
+  nothing changes.
 
 ### Fixed
 
