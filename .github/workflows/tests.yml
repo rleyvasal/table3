@@ -33,6 +33,23 @@ jobs:
       - name: Run tests
         run: python -m pytest -q --tb=short
 
+  browser:
+    name: Explorer in headless Chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install table3, Playwright and Chromium
+        run: |
+          python -m pip install -e ".[dev,browser]"
+          python -m playwright install --with-deps chromium
+      - name: Drive the explorer
+        run: python -m pytest -q --tb=short tests/test_explorer_browser.py
+
   distributions:
     name: Source distribution, metadata, and installed wheel
     runs-on: ubuntu-latest

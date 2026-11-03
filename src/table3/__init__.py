@@ -5,6 +5,8 @@ Previous / page / Next buttons and, for wide data, as many columns as fit
 the cell plus arrows to the rest: what a package returns from its frames'
 ``_repr_html_`` so they print as R notebooks print data frames.
 ``table3.show(data)`` displays the same table and returns *data* unchanged.
+``table3.view(data)`` opens a data explorer instead, as R's ``View()``: a
+grid of up to 10,000 rows to search, sort and filter.
 
 *data* is a polars DataFrame, LazyFrame or Series, a pandas DataFrame or
 Series, or any object with a ``__table3__`` method::
@@ -25,7 +27,7 @@ import polars as pl
 from table3.__version__ import __version__
 from table3._html import table_html
 
-__all__ = ["__version__", "html", "show"]
+__all__ = ["__version__", "html", "show", "view"]
 
 
 def _from_pandas(df: Any) -> pl.DataFrame:
@@ -109,6 +111,19 @@ def html(
     )
 
 
+def _display(html_text: str) -> bool:
+    """Show *html_text* in a notebook; False outside one."""
+    try:
+        from IPython import get_ipython
+        from IPython.display import HTML, display
+    except ImportError:
+        return False
+    if get_ipython() is None:
+        return False
+    display(HTML(html_text))
+    return True
+
+
 def _text(data: Any, n: int, digits: int | str | None = None) -> str:
     df, total, caption = _parts(data, n)
     # Polars prints no significant digits; digits=k applies to the table only.
@@ -139,15 +154,42 @@ def show(
     the line with ``;`` to hide it.
     """
     _check(n, pages, page_size, height, digits)
-    try:
-        from IPython import get_ipython
-        from IPython.display import HTML, display
-    except ImportError:
-        get_ipython = None
-    if get_ipython is not None and get_ipython() is not None:
-        options = {"n": n, "pages": pages, "page_size": page_size, "height": height}
-        display(HTML(html(data, digits=digits, caption=caption, **options)))
-    else:
+    options = {"n": n, "pages": pages, "page_size": page_size, "height": height}
+    if not _display(html(data, digits=digits, caption=caption, **options)):
         print(_text(data, n, digits))
+    return data
+
+
+def view(
+    data: Any,
+    *,
+    n: int = 10_000,
+    height: int = 500,
+    digits: int | str | None = None,
+    caption: str | None = None,
+) -> Any:
+    """Open a data explorer over the first *n* rows of *data*, and return *data*.
+
+    As R's ``View()``: one grid to scroll, a search box, headers that sort
+    on a click, and a filter under each column (from-to for numbers and
+    dates, "contains" for text, a pick-list for columns of few values).
+    The rows go into the notebook's output, so the explorer works in a saved
+    notebook, about 1 MB for 10,000 rows of a dozen columns. *height* is the
+    grid's height in pixels; *digits* and *caption* as in ``html()``. Where
+    output scripts don't run, it shows the first 100 rows as ``show()``.
+    Outside a notebook it prints the first rows.
+    """
+    _check(n, True, 10, height, digits)
+    if height is None:
+        raise ValueError("table3: view() height must be a positive integer")
+    from table3._explore import explorer_html
+
+    df, total, own_caption = _parts(data, n)
+    page = explorer_html(
+        df, total, own_caption if caption is None else caption,
+        n=n, height=height, digits=digits,
+    )
+    if not _display(page):
+        print(_text(data, min(n, 20), digits))
     return data
 

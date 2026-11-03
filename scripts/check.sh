@@ -5,7 +5,13 @@
 # so nothing installed on this machine can hide a failure that CI would see.
 #
 #   scripts/check.sh          all jobs, one after another
-#   scripts/check.sh 3.12     one Python version only, then the distribution job
+#   scripts/check.sh 3.12     one Python version only, then the browser and
+#                             distribution jobs
+#
+# The browser job installs Playwright's Chromium. On Linux it needs the
+# libraries Chromium links to (playwright install --with-deps, with sudo);
+# without sudo, unpack the missing ones and list their folder in
+# LD_LIBRARY_PATH, which this script passes on.
 #
 # Needs uv (https://docs.astral.sh/uv/); it downloads missing Pythons.
 set -euo pipefail
@@ -36,6 +42,14 @@ pytest_job() {
     "$env/bin/python" -m pytest -q -p no:cacheprovider
 }
 
+browser_job() {
+  local env="$work/browser"
+  uv venv -q --python 3.12 "$env" &&
+    uv pip install -q --python "$env/bin/python" -e ".[dev,browser]" &&
+    "$env/bin/python" -m playwright install chromium > /dev/null &&
+    "$env/bin/python" -m pytest -q -p no:cacheprovider tests/test_explorer_browser.py
+}
+
 distributions_job() {
   local env="$work/build" clean="$work/clean"
   rm -rf build dist src/*.egg-info
@@ -51,6 +65,7 @@ distributions_job() {
 for v in "${versions[@]}"; do
   run "pytest (Python $v)" pytest_job "$v"
 done
+run "explorer in headless Chromium" browser_job
 run "distributions" distributions_job
 
 if (( ${#failed[@]} )); then

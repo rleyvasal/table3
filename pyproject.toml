@@ -27,6 +27,9 @@ dependencies = [
 [project.optional-dependencies]
 # pandas and pyarrow: the pandas input tests.
 dev = ["pytest>=7.0", "ipython>=8.0", "pandas>=2.1.4", "pyarrow>=15.0"]
+# The explorer's script in headless Chromium (tests/test_explorer_browser.py);
+# also run: python -m playwright install chromium
+browser = ["pytest-playwright>=0.5"]
 
 [project.urls]
 Homepage = "https://github.com/rleyvasal/table3"

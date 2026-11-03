@@ -28,7 +28,20 @@ full value on hover. Wide tables show as many columns as fit, with
 arrows to the rest. The table follows the notebook's light or dark theme in
 VS Code, JupyterLab and SolveIt.
 
-`show()` returns what it was given, so it can sit in the middle of a pipe.
+## Explore
+
+`table3.view(penguins)` opens a data explorer, as R's `View()` does: one
+grid of up to 10,000 rows with a search box, headers that sort on a click,
+and a filter under each column (from–to for numbers and dates, "contains"
+for text, a pick-list for columns of few values).
+
+```python
+table3.view(penguins);
+table3.view(penguins, n=50_000, height=600);  # more rows, a taller grid
+```
+
+`show()` and `view()` return what they were given, so they can sit in the
+middle of a pipe.
 As a cell's last line the notebook also prints that value; end the line with
 `;` to hide it.
 
@@ -49,6 +62,6 @@ def _repr_html_(self):
 ## More
 
 [docs/design.md](docs/design.md) records the design and what each package
-adds. table3 was first released as view3 0.1 and 0.2, where `show()` was
-`view()`, and its versions continue from them. The name `view` is kept for a
-data explorer, as R's `View()` opens one.
+adds, and [docs/explorer.md](docs/explorer.md) the explorer's. table3 was
+first released as view3 0.1 and 0.2, where `show()` was `view()`; its
+versions continue from them, and `view()` is now the explorer.

@@ -32,6 +32,12 @@ cells = [
     ("md", "## Row limit, bigger pages, empty"),
     ("code", "table3.show(penguins, n=100, page_size=25);"),
     ("code", 'table3.show(penguins.filter(pl.col("body_mass_g") > 99999));'),
+    ("md", "## Explorer: search, click a header to sort, filter under each column"),
+    ("code", "dated = penguins.with_columns(\n"
+             '    day=pl.date(2007, 1, 1) + pl.duration(days=pl.int_range(pl.len()) * 3),\n'
+             ")\n"
+             "table3.view(dated);"),
+    ("code", "table3.view(pl.DataFrame({\"x\": range(10_000)}), height=300);"),
     ("md", "## Viewing returns the data unchanged"),
     ("code", "before = penguins.clone()\ntable3.show(penguins).equals(before)"),
 ]

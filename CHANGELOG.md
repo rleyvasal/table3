@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.4.0 — unreleased
+
+### Added
+
+- `table3.view(data)` opens a data explorer over the first 10,000 rows, as
+  R's `View()`: one grid to scroll, with row numbers, a search box, headers
+  that sort on a click (ascending, descending, off; nulls last), and a filter
+  under each column: from–to for numbers and dates (`2008` matches a year),
+  "contains" for text, and a pick-list for booleans and columns of at most
+  50 values. The status line counts the rows that pass ("120 of 344 rows").
+  It runs in the notebook's browser, so it works in saved notebooks; the
+  rows are JSON drawn a screen at a time, about 1 MB for 10,000 rows of a
+  dozen columns. Where output scripts don't run, it shows the first 100
+  rows as `show()` does. [docs/explorer.md](docs/explorer.md) has the design.
+
 ## 0.3.0 — 2026-11-02
 
 table3 is view3 renamed: the table is how a frame prints in a notebook, as
