@@ -28,7 +28,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      - name: Install view3
+      - name: Install table3
         run: python -m pip install -e ".[dev]"
       - name: Run tests
         run: python -m pytest -q --tb=short
@@ -51,7 +51,7 @@ jobs:
         run: |
           python -m venv /tmp/clean
           /tmp/clean/bin/pip install dist/*.whl
-          cd /tmp && /tmp/clean/bin/python -c "import polars as pl, view3; h = view3.html(pl.DataFrame({'x': [1.5, None]})); assert '>1.5<' in h and '>null<' in h; print(view3.__version__)"
+          cd /tmp && /tmp/clean/bin/python -c "import polars as pl, table3; h = table3.html(pl.DataFrame({'x': [1.5, None]})); assert '>1.5<' in h and '>null<' in h; print(table3.__version__)"
       - name: Save validated distributions
         uses: actions/upload-artifact@v7
         with:

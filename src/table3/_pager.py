@@ -1,4 +1,4 @@
-"""The script that pages a view3 table in place."""
+"""The script that pages a table3 table in place."""
 
 # Column widths are measured once over all rows, so a column page keeps its
 # columns whichever row page is shown. __ID__ is the table's root element.

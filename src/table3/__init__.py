@@ -1,19 +1,19 @@
 """Paged, theme-aware tables in notebook output.
 
-``view3.html(data)`` is a table of up to *n* rows shown ten at a time, with
+``table3.html(data)`` is a table of up to *n* rows shown ten at a time, with
 Previous / page / Next buttons and, for wide data, as many columns as fit
 the cell plus arrows to the rest: what a package returns from its frames'
 ``_repr_html_`` so they print as R notebooks print data frames.
-``view3.show(data)`` displays the same table and returns *data* unchanged.
+``table3.show(data)`` displays the same table and returns *data* unchanged.
 
 *data* is a polars DataFrame, LazyFrame or Series, a pandas DataFrame or
-Series, or any object with a ``__view3__`` method::
+Series, or any object with a ``__table3__`` method::
 
-    def __view3__(self, n: int) -> tuple[polars.DataFrame, int | None, str | None]:
+    def __table3__(self, n: int) -> tuple[polars.DataFrame, int | None, str | None]:
         # the first n rows, the whole row count (None if not counted),
         # and a caption shown above the table (None for none)
 
-so a package's own frames show without view3 importing that package.
+so a package's own frames show without table3 importing that package.
 """
 
 from __future__ import annotations
@@ -22,8 +22,8 @@ from typing import Any
 
 import polars as pl
 
-from view3.__version__ import __version__
-from view3._html import table_html
+from table3.__version__ import __version__
+from table3._html import table_html
 
 __all__ = ["__version__", "html", "show"]
 
@@ -36,8 +36,8 @@ def _from_pandas(df: Any) -> pl.DataFrame:
 
 
 def _parts(data: Any, n: int) -> tuple[pl.DataFrame, int | None, str | None]:
-    if hasattr(type(data), "__view3__"):
-        return data.__view3__(n)
+    if hasattr(type(data), "__table3__"):
+        return data.__table3__(n)
     if isinstance(data, pl.Series):
         data = data.to_frame()
     if isinstance(data, pl.LazyFrame):
@@ -45,14 +45,14 @@ def _parts(data: Any, n: int) -> tuple[pl.DataFrame, int | None, str | None]:
         return head, int(count.item()), None
     if isinstance(data, pl.DataFrame):
         return data.head(n), data.height, None
-    # pandas, duck-typed so view3 never imports it
+    # pandas, duck-typed so table3 never imports it
     if hasattr(data, "to_frame") and hasattr(data, "iloc") and not hasattr(data, "columns"):
         data = data.to_frame()
     if hasattr(data, "columns") and hasattr(data, "iloc"):
         return _from_pandas(data.head(n)), len(data), None
     raise TypeError(
-        f"view3 can't show a {type(data).__name__}: pass a polars or pandas "
-        "DataFrame or Series, or an object with a __view3__ method"
+        f"table3 can't show a {type(data).__name__}: pass a polars or pandas "
+        "DataFrame or Series, or an object with a __table3__ method"
     )
 
 
@@ -62,15 +62,15 @@ def _positive_int(value: Any) -> bool:
 
 def _check(n: Any, pages: Any, page_size: Any, height: Any, digits: Any) -> None:
     if not isinstance(n, int) or isinstance(n, bool) or n < 0:
-        raise ValueError("view3: n must be a non-negative integer")
+        raise ValueError("table3: n must be a non-negative integer")
     if not isinstance(pages, bool):
-        raise TypeError("view3: pages must be True or False")
+        raise TypeError("table3: pages must be True or False")
     if not _positive_int(page_size):
-        raise ValueError("view3: page_size must be a positive integer")
+        raise ValueError("table3: page_size must be a positive integer")
     if height is not None and not _positive_int(height):
-        raise ValueError("view3: height must be a positive integer or None")
+        raise ValueError("table3: height must be a positive integer or None")
     if digits is not None and digits != "full" and not _positive_int(digits):
-        raise ValueError('view3: digits must be a positive integer, "full", or None')
+        raise ValueError('table3: digits must be a positive integer, "full", or None')
 
 
 def html(
@@ -94,7 +94,7 @@ def html(
     otherwise: ``digits=6`` keeps six significant digits, as R's
     ``signif()`` does, so small numbers keep their precision (0.000123457);
     ``digits="full"`` shows every stored digit. *caption* replaces the one
-    ``__view3__`` gives.
+    ``__table3__`` gives.
     """
     _check(n, pages, page_size, height, digits)
     df, total, own_caption = _parts(data, n)

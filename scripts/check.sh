@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run what CI runs (.github/workflows/tests.yml), locally, before pushing.
 #
-# Each job gets a fresh environment with only view3's declared dependencies,
+# Each job gets a fresh environment with only table3's declared dependencies,
 # so nothing installed on this machine can hide a failure that CI would see.
 #
 #   scripts/check.sh          all jobs, one after another
@@ -45,7 +45,7 @@ distributions_job() {
     "$env/bin/python" -m twine check --strict "$work"/dist/* &&
     uv venv -q --python 3.12 "$clean" &&
     uv pip install -q --python "$clean/bin/python" "$work"/dist/*.whl &&
-    (cd "$work" && "$clean/bin/python" -c "import polars as pl, view3; h = view3.html(pl.DataFrame({'x': [1.5, None]})); assert '>1.5<' in h and '>null<' in h; print(view3.__version__)")
+    (cd "$work" && "$clean/bin/python" -c "import polars as pl, table3; h = table3.html(pl.DataFrame({'x': [1.5, None]})); assert '>1.5<' in h and '>null<' in h; print(table3.__version__)")
 }
 
 for v in "${versions[@]}"; do

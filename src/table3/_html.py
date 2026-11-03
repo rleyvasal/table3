@@ -19,8 +19,8 @@ import uuid
 
 import polars as pl
 
-from view3._format import cell, display_rows, dtype_short, escape
-from view3._pager import PAGER_JS
+from table3._format import cell, display_rows, dtype_short, escape
+from table3._pager import PAGER_JS
 
 MONO = "12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace"
 RULE = "border-bottom:1px solid rgba(127,127,127,.45)"
@@ -96,7 +96,7 @@ def table_html(
     root = "<div>"
     pager = script = ""
     if pages:
-        uid = f"view3-{uuid.uuid4().hex}"
+        uid = f"table3-{uuid.uuid4().hex}"
         label = _html.escape(pages_label(df.height, total))
         root = f"<div id='{uid}' data-page-size='{page_size}' data-label='{label}'>"
         pager = (
