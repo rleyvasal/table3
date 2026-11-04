@@ -41,7 +41,11 @@ used it yet, so it is gone rather than deprecated.
 - Ten rows a page (`page_size=`), Previous / page numbers / Next, and as many
   columns as fit the cell with `◂ columns` / `columns ▸` for the rest. Column
   groups are measured once over all *n* rows, so they don't shift between
-  pages, and they are regrouped when the cell's width changes.
+  pages, and they are regrouped when the cell's width changes. Each column
+  is pinned at that width, a short last page is padded with blank rows, and
+  past seven pages the links fill seven fixed-width slots (`1 … 4 5 6 … 21`,
+  or five pages and `…` near an end), so Next keeps its place on every page,
+  as in RStudio's paged table.
 - The footer counts rows and columns ("21–30 of 344 rows | 10–12 of 12
   columns") and says when *n* cut the rows ("1–10 of 100 rows (first 100 of
   52,341)").

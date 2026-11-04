@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- A paged table's Next button stays where it is from the first page to the
+  last, so it can be clicked over and over: the page links fill a fixed
+  number of fixed-width slots, each column keeps the width measured over
+  all rows, and blank rows pad a short last page. A control that can't act
+  is dimmed rather than disabled, so it keeps keyboard focus (pressing Enter
+  on Next walks every page).
+
 ## 0.5.0 — 2026-11-03
 
 ### Added
