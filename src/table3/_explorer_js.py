@@ -43,7 +43,7 @@ EXPLORER_JS = r"""
 
   // Column widths in characters, from the widest text up to the cut.
   var widths = cols.map(function (col, c) {
-    // Numbers and dates need room for their two filter boxes, from and to.
+    // Numbers and dates need room for their filter's from and to boxes.
     var w = Math.max(col.name.length + 2, col.type.length, NUMERIC[col.kind] ? 12 : 6);
     for (var r = 0; r < rows.length && w < CUT; r++) w = Math.max(w, text[r][c].length);
     return Math.min(w, CUT);
@@ -68,10 +68,17 @@ EXPLORER_JS = r"""
   var INPUT = "font:inherit;color:inherit;background:transparent;border:1px solid " + GREY +
     ";border-radius:4px;padding:1px 6px;box-sizing:border-box";
   search.style.cssText = INPUT + ";width:16em";
+  // Filters stay out of sight until asked for, as in RStudio's viewer.
+  var filterBtn = document.createElement("button");
+  filterBtn.type = "button"; filterBtn.textContent = "Filter";
+  filterBtn.dataset.filterToggle = "";
+  filterBtn.setAttribute("aria-pressed", "false");
+  filterBtn.title = "Filter by column";
+  filterBtn.style.cssText = INPUT + ";cursor:pointer";
   var status = document.createElement("span");
   status.dataset.status = "";
   status.style.cssText = "opacity:.65";
-  bar.appendChild(search); bar.appendChild(status);
+  bar.appendChild(search); bar.appendChild(filterBtn); bar.appendChild(status);
   root.appendChild(bar);
 
   var box = document.createElement("div");
@@ -90,17 +97,24 @@ EXPLORER_JS = r"""
   var sortCol = -1, sortDir = 0, filters = cols.map(function () { return null; });
   var order = [], query = "";
 
-  // Header: names with sort arrows, types, filters.
+  // Header: names with sort arrows, types, and, under the Filter button, a
+  // filter per column.
   var nameRow = document.createElement("tr"), typeRow = document.createElement("tr"),
     filterRow = document.createElement("tr");
+  var RULE = "1px solid " + GREY, typeCells = [];
+  var CHIP = "font:inherit;color:inherit;background:transparent;border:1px solid " + GREY +
+    ";border-radius:9px;padding:0 6px;line-height:16px;cursor:pointer;white-space:pre;" +
+    "overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:100%";
   function corner(tr, html) {
     var td = document.createElement("td");
     td.style.cssText = NUM_STYLE + ";z-index:3";
     td.innerHTML = html;
     tr.appendChild(td);
+    return td;
   }
-  corner(nameRow, ""); corner(typeRow, ""); corner(filterRow, "");
-  var arrows = [];
+  corner(nameRow, ""); typeCells.push(corner(typeRow, ""));
+  corner(filterRow, "").style.borderBottom = RULE;
+  var arrows = [], controls = [];
   cols.forEach(function (col, c) {
     var td = document.createElement("td");
     td.style.cssText = cellStyle(c) + ";cursor:pointer;user-select:none";
@@ -124,69 +138,139 @@ EXPLORER_JS = r"""
     ttd.style.cssText = cellStyle(c) + ";opacity:.55";
     ttd.textContent = col.type;
     typeRow.appendChild(ttd);
+    typeCells.push(ttd);
 
     var ftd = document.createElement("td");
-    ftd.style.cssText = cellStyle(c) + ";height:auto;padding:2px 4px 4px 4px;border-bottom:1px solid " + GREY;
-    ftd.appendChild(filterControl(col, c));
+    ftd.style.cssText = cellStyle(c) + ";height:auto;padding:2px 4px 4px 4px;" +
+      "overflow:visible;border-bottom:" + RULE;
+    var control = filterControl(col, c);
+    ftd.appendChild(control.el);
+    controls.push(control);
     filterRow.appendChild(ftd);
   });
   thead.appendChild(nameRow); thead.appendChild(typeRow); thead.appendChild(filterRow);
 
+  function showFilters(on) {
+    filterBtn.setAttribute("aria-pressed", String(on));
+    filterBtn.style.borderColor = on ? "currentColor" : GREY;
+    filterRow.style.display = on ? "" : "none";
+    typeCells.forEach(function (td) { td.style.borderBottom = on ? "0" : RULE; });
+  }
+  showFilters(false);
+  // Hiding the filters clears them, so no row is ever filtered out of sight.
+  filterBtn.onclick = function () {
+    var on = filterBtn.getAttribute("aria-pressed") !== "true";
+    if (!on) controls.forEach(function (k) { k.clear(); });
+    showFilters(on);
+    if (!on) apply();
+  };
+
+  // One column's filter: a chip that reads "All", or the filter in words
+  // ("10–50", "Gentoo") with × to clear it. Clicking the chip swaps it for
+  // the column's editor until Enter, Escape or a click elsewhere.
   function filterControl(col, c) {
-    var timer = null;
-    function later(fn) { clearTimeout(timer); timer = setTimeout(fn, 150); }
+    var el = document.createElement("div");
+    // The chip sits where the column's values do: right for numbers and dates.
+    el.style.cssText = "display:flex;align-items:center;gap:2px;min-width:0;height:18px;" +
+      "justify-content:" + (NUMERIC[col.kind] ? "flex-end" : "flex-start");
+    var chip = document.createElement("button");
+    chip.type = "button"; chip.dataset.chip = col.name;
+    chip.style.cssText = CHIP + ";flex:0 1 auto";
+    var clearBtn = document.createElement("button");
+    clearBtn.type = "button"; clearBtn.dataset.clear = col.name; clearBtn.textContent = "×";
+    clearBtn.title = "Clear the filter on " + col.name;
+    clearBtn.style.cssText = CHIP + ";flex:none;padding:0 4px";
+    var editor = document.createElement("div");
+    editor.style.cssText = "display:none;gap:2px;width:100%;min-width:0";
+    el.appendChild(chip); el.appendChild(clearBtn); el.appendChild(editor);
+
+    // The editor's boxes are the chip's height, so opening one moves nothing.
+    var SLIM = "height:18px;padding:0 4px;line-height:16px";
+    var words = "", timer = null, inputs = [], commit;
+    function later() { clearTimeout(timer); timer = setTimeout(function () { commit(); apply(); }, 150); }
+    function input(placeholder, width) {
+      var inp = document.createElement("input");
+      inp.placeholder = placeholder;
+      inp.style.cssText = INPUT + ";width:" + width + ";min-width:0;" + SLIM;
+      inp.oninput = later;
+      editor.appendChild(inp); inputs.push(inp);
+      return inp;
+    }
+
     if (col.kind === "choice" || col.kind === "bool") {
       var sel = document.createElement("select");
-      sel.style.cssText = INPUT + ";width:100%;" + SOLID;
+      sel.style.cssText = INPUT + ";width:100%;" + SLIM + ";" + SOLID;
       var values = col.kind === "bool" ? [true, false] : col.choices;
-      var opts = [["", "All"]].concat(values.map(function (v, i) { return ["v" + i, String(v)]; }))
-        .concat([["null", "null"]]);
-      opts.forEach(function (o) {
-        var op = document.createElement("option");
-        op.value = o[0]; op.textContent = o[1];
-        sel.appendChild(op);
-      });
-      sel.onchange = function () {
+      [["", "All"]].concat(values.map(function (v, i) { return ["v" + i, String(v)]; }))
+        .concat([["null", "null"]]).forEach(function (o) {
+          var op = document.createElement("option");
+          op.value = o[0]; op.textContent = o[1];
+          sel.appendChild(op);
+        });
+      editor.appendChild(sel); inputs.push(sel);
+      commit = function () {
         var v = sel.value;
         filters[c] = v === "" ? null : v === "null" ? { is: null } : { is: values[+v.slice(1)] };
-        apply();
+        words = sel.options[sel.selectedIndex].textContent;
       };
-      return sel;
+      sel.onchange = function () { close(); chip.focus(); };
+    } else if (NUMERIC[col.kind]) {
+      var lo = input("from", "50%"), hi = input("to", "50%");
+      commit = function () {
+        var a = lo.value.trim(), b = hi.value.trim(), fa = a || null, fb = b || null;
+        if (col.kind === "number") {
+          fa = a === "" ? null : parseFloat(a); fb = b === "" ? null : parseFloat(b);
+          if (fa !== null && isNaN(fa)) { fa = null; a = ""; }
+          if (fb !== null && isNaN(fb)) { fb = null; b = ""; }
+        }
+        filters[c] = fa === null && fb === null ? null : { from: fa, to: fb };
+        words = a && b ? (a === b ? a : a + "–" + b) : a ? "≥ " + a : "≤ " + b;
+      };
+    } else {
+      var has = input("contains", "100%");
+      commit = function () {
+        var q = has.value.trim();
+        filters[c] = q ? { has: q.toLowerCase() } : null;
+        words = '"' + q + '"';
+      };
     }
-    if (NUMERIC[col.kind]) {
-      var wrap = document.createElement("div");
-      wrap.style.cssText = "display:flex;gap:2px";
-      var lo = document.createElement("input"), hi = document.createElement("input");
-      [lo, hi].forEach(function (inp, i) {
-        inp.placeholder = i ? "to" : "from";
-        inp.style.cssText = INPUT + ";width:50%;min-width:0";
-        inp.oninput = function () {
-          later(function () {
-            var a = lo.value.trim(), b = hi.value.trim();
-            if (col.kind === "number") {
-              a = a === "" ? null : parseFloat(a); b = b === "" ? null : parseFloat(b);
-              if (a !== null && isNaN(a)) a = null;
-              if (b !== null && isNaN(b)) b = null;
-            } else { a = a || null; b = b || null; }
-            filters[c] = a === null && b === null ? null : { from: a, to: b };
-            apply();
-          });
-        };
-        wrap.appendChild(inp);
-      });
-      return wrap;
+
+    function show() {
+      var on = filters[c] !== null;
+      chip.textContent = on ? words : "All";
+      chip.title = on ? col.name + ": " + words + " (click to change)" : "Filter " + col.name;
+      chip.style.opacity = on ? "1" : ".55";
+      clearBtn.style.display = on ? "" : "none";
     }
-    var inp = document.createElement("input");
-    inp.placeholder = "contains";
-    inp.style.cssText = INPUT + ";width:100%";
-    inp.oninput = function () {
-      later(function () {
-        var q = inp.value.trim().toLowerCase();
-        filters[c] = q ? { has: q } : null;
-        apply();
-      });
-    };
-    return inp;
+    function open() {
+      chip.style.display = clearBtn.style.display = "none";
+      editor.style.display = "flex";
+      inputs[0].focus();
+    }
+    function close() {
+      if (editor.style.display === "none") return;
+      clearTimeout(timer);
+      commit(); apply();
+      editor.style.display = "none"; chip.style.display = "";
+      show();
+    }
+    function clear() {
+      clearTimeout(timer);
+      inputs.forEach(function (inp) { inp.value = ""; });
+      commit();
+      editor.style.display = "none"; chip.style.display = "";
+      show();
+    }
+    chip.onclick = open;
+    clearBtn.onclick = function () { clear(); apply(); chip.focus(); };
+    editor.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === "Escape") { e.preventDefault(); close(); chip.focus(); }
+    });
+    editor.addEventListener("focusout", function (e) {
+      if (!editor.contains(e.relatedTarget)) close();
+    });
+    show();
+    return { el: el, clear: clear };
   }
 
   function passes(r) {

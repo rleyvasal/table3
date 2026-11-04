@@ -81,11 +81,19 @@ only bare `view` in the family; tidy3a and stats3 document `table3.view(x)`.
 
 - **Header**, pinned: name, type (`i64`, `str`), and a sort arrow; clicking
   cycles ascending, descending, off. One sort column at a time, as R.
-- **Filter row** under the header, one control per column by type:
+- **Filters**, as RStudio shows them: hidden until the **Filter** button
+  beside the search box is pressed, then a compact `All` under each
+  column. Clicking it opens that column's editor in its place:
   - numbers and dates: two boxes, from and to, either blank;
   - strings: contains, case-insensitive;
   - strings with at most 50 distinct values, booleans and categoricals: a
     pick-list of their values, with `null` as one choice.
+  Enter, Escape or a click elsewhere closes the editor, and a column with a
+  filter then reads it in words, `10–50 ×`, `≥ 2008 ×`, `Gentoo ×` or
+  `"item 2" ×`, where × clears it. Turning Filter off clears every filter,
+  so no row is ever filtered out of sight. The editor is the chip's height,
+  so opening it moves nothing. (0.5.1 and before showed every column's
+  boxes at once: two inputs under each number column, mostly unused.)
 - **Search box** above: rows where any cell's text contains it.
 - **Row numbers** on the left: the row's place in *data*, kept through sorts
   and filters, as R shows them.

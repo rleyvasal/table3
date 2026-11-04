@@ -126,38 +126,108 @@ def test_nulls_sort_last_both_ways(explore):
         assert _cells(page, _rows(page)[-1])[5] == "null"
 
 
+def _filters_on(page) -> None:
+    toggle = page.locator("[data-filter-toggle]")
+    if toggle.get_attribute("aria-pressed") != "true":
+        toggle.click()
+
+
+def _edit(page, name: str):
+    """Open the filter on column *name*: the cell holding its editor."""
+    _filters_on(page)
+    page.locator(f"[data-chip='{name}']").click()
+    return page.locator(f"[data-grid] thead td:has([data-chip='{name}'])")
+
+
+def _chip(page, name: str) -> str:
+    return page.locator(f"[data-chip='{name}']").text_content()
+
+
 def test_number_filter(explore):
     page = explore(FRAME)
-    page.locator("input[placeholder='from']").first.fill("10")
-    page.locator("input[placeholder='to']").first.fill("19")
+    cell = _edit(page, "x")
+    cell.locator("input[placeholder='from']").fill("10")
+    cell.locator("input[placeholder='to']").fill("19")
     _wait_status(page, "10 of 300")
     assert sorted(int(_cells(page, r)[1]) for r in _rows(page)) == list(range(10, 20))
 
 
 def test_choice_filter_and_null_choice(explore):
     page = explore(FRAME)
-    select = page.locator("select").first
+    select = _edit(page, "species").locator("select")
     select.select_option(label="Gentoo")
     _wait_status(page, "75 of 300")
+    assert _chip(page, "species") == "Gentoo"
+    select = _edit(page, "species").locator("select")
     select.select_option(label="null")
     _wait_status(page, "75 of 300")
     assert _cells(page, _rows(page)[0])[2] == "null"
+    select = _edit(page, "species").locator("select")
     select.select_option(label="All")
     _wait_status(page, "300 of 300")
+    assert _chip(page, "species") == "All"
 
 
 def test_text_filter_search_and_date_prefix(explore):
     page = explore(FRAME)
-    page.locator("[data-grid] input[placeholder='contains']").fill("item 2")  # 2, 20-29, 200-299
+    note = _edit(page, "note").locator("input[placeholder='contains']")
+    note.fill("item 2")  # 2, 20-29, 200-299
     _wait_status(page, "111 of 300")
     page.locator("input[type='search']").fill("adelie")
     _wait_status(page, "28 of 300")
-    page.locator("[data-grid] input[placeholder='contains']").fill("")
+    assert _chip(page, "note") == '"item 2"'
+    page.locator("[data-clear='note']").click()
     _wait_status(page, "75 of 300")
     page.locator("input[type='search']").fill("")
-    page.locator("input[placeholder='from']").nth(1).fill("2008")
-    page.locator("input[placeholder='to']").nth(1).fill("2008")
+    day = _edit(page, "day")
+    day.locator("input[placeholder='from']").fill("2008")
+    day.locator("input[placeholder='to']").fill("2008")
     _wait_status(page, "100 of 300")
+
+
+def _shown(page, selector: str) -> int:
+    return page.locator(selector).filter(visible=True).count()
+
+
+def test_filters_hide_until_asked_for(explore):
+    page = explore(FRAME)
+    assert _shown(page, "[data-grid] thead input, [data-grid] thead select") == 0
+    assert _shown(page, "[data-chip]") == 0
+    _filters_on(page)
+    assert [page.locator(f"[data-chip='{c}']").text_content() for c in FRAME.columns] == ["All"] * 5
+    assert _shown(page, "[data-grid] thead input, [data-grid] thead select") == 0
+    assert _shown(page, "[data-clear]") == 0
+    _edit(page, "x")
+    assert _shown(page, "[data-grid] thead input") == 2  # from and to, for x only
+
+
+def test_a_range_reads_as_a_label_and_clears(explore):
+    page = explore(FRAME)
+    cell = _edit(page, "x")
+    cell.locator("input[placeholder='from']").fill("10")
+    cell.locator("input[placeholder='to']").fill("50")
+    cell.locator("input[placeholder='to']").press("Enter")
+    assert _chip(page, "x") == "10–50"
+    assert _shown(page, "[data-grid] thead input") == 0
+    assert _status(page).startswith("41 of 300")
+    cell = _edit(page, "mass")
+    cell.locator("input[placeholder='from']").fill("3100")
+    page.locator("input[type='search']").click()  # a click elsewhere closes it
+    assert _chip(page, "mass") == "≥ 3100"
+    page.locator("[data-clear='x']").click()
+    assert _chip(page, "x") == "All"
+    assert _shown(page, "[data-clear]") == 1
+    _wait_status(page, str(FRAME.filter(pl.col("mass") >= 3100).height) + " of 300")
+
+
+def test_hiding_the_filters_clears_them(explore):
+    page = explore(FRAME)
+    _edit(page, "species").locator("select").select_option(label="Gentoo")
+    _wait_status(page, "75 of 300")
+    page.locator("[data-filter-toggle]").click()
+    _wait_status(page, "300 of 300")
+    _filters_on(page)
+    assert _chip(page, "species") == "All"
 
 
 def test_ten_thousand_rows_scroll_virtually(explore):
@@ -183,3 +253,4 @@ def test_digits_in_the_grid(explore):
     df = pl.DataFrame({"r": [0.000123456789, 1.9015544041450778]})
     assert _cells(explore(df), 1)[1] == "0.000123"
     assert _cells(explore(df, digits=6), 1)[1] == "0.000123457"
+

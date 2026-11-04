@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- The explorer's filters stay hidden until the new Filter button beside
+  Search is pressed, as in RStudio's viewer. Each column then shows a
+  compact `All`; clicking it opens that column's filter (from and to for
+  numbers and dates, contains for text, a pick-list for few values), and
+  once applied it reads as a label such as `10–50 ×`, where × clears it.
+  Turning Filter off clears every filter.
+
 ## 0.5.1 — 2026-11-03
 
 ### Fixed
