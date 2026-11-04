@@ -254,3 +254,19 @@ def test_digits_in_the_grid(explore):
     assert _cells(explore(df), 1)[1] == "0.000123"
     assert _cells(explore(df, digits=6), 1)[1] == "0.000123457"
 
+
+def test_alignment_matches_the_paged_table(explore):
+    """view() lines values up as the paged table does: numbers, dates and
+    times right; text and booleans left, names and types with them."""
+    from table3._html import right_aligned
+
+    df = pl.DataFrame({"s": ["a", "b"], "n": [1, 2], "f": [1.5, 2.5],
+                       "d": [dt.date(2020, 1, 1)] * 2, "t": [dt.datetime(2020, 1, 1)] * 2,
+                       "b": [True, False], "c": pl.Series(["x", "y"], dtype=pl.Categorical)})
+    want = ["right" if right_aligned(t) else "left" for t in df.dtypes]
+    assert want == ["left", "right", "right", "right", "right", "left", "left"]
+    page = explore(df)
+    rows = page.evaluate("""() => [...document.querySelectorAll(
+        '[data-grid] thead tr:nth-child(-n+2), [data-grid] tbody tr[data-row]')]
+      .map(tr => [...tr.cells].slice(1).map(td => getComputedStyle(td).textAlign))""")
+    assert len(rows) == 4 and all(r == want for r in rows)  # name, type, two rows

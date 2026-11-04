@@ -29,7 +29,7 @@ MONO = "12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace"
 RULE = "border-bottom:1px solid rgba(127,127,127,.45)"
 # The font is set once on the table: a cell's style repeats on up to
 # n x columns cells, and the font list is half its length.
-CELL = "font:inherit;padding:3px 10px;text-align:right;white-space:pre;border:0"
+CELL = "font:inherit;padding:3px 10px;white-space:pre;border:0"
 HEAD_BG = (
     "background-color:var(--vscode-editor-background,"
     "var(--jp-layout-color0,Canvas));"
@@ -51,12 +51,9 @@ def rows_label(shown: int, total: int | None) -> str:
     return f"showing first {shown:,} of {of} rows"
 
 
-def pages_label(shown: int, total: int | None) -> str:
-    """What the pager counts rows of: "344 rows", or the first 100 of more."""
-    if total is not None and total <= shown:
-        return _plural(shown)
-    of = "more" if total is None else f"{total:,}"
-    return f"{_plural(shown)} (first {shown:,} of {of})"
+def right_aligned(dtype: pl.DataType) -> bool:
+    """Numbers, dates and times line up on the right; text and the rest on the left."""
+    return dtype.is_numeric() or dtype.is_temporal()
 
 
 def table_html(
@@ -71,18 +68,20 @@ def table_html(
 ) -> str:
     """*df* is the first rows; *total* the whole row count, None if not counted."""
 
-    def _tr(cells: list[str], style: str, row_style: str = "") -> str:
-        tds = "".join(f"<td style='{style}'>{c}</td>" for c in cells)
+    align = [
+        f"{CELL};text-align:{'right' if right_aligned(t) else 'left'}" for t in df.dtypes
+    ]
+
+    def _tr(cells: list[str], extra: str = "", row_style: str = "") -> str:
+        tds = "".join(f"<td style='{a}{extra}'>{c}</td>" for a, c in zip(align, cells))
         return f"<tr style='{row_style}'>{tds}</tr>"
 
-    head = _tr([f"<b>{escape(c)}</b>" for c in df.columns], f"{CELL};{RULE}")
-    types = _tr(
-        [escape(dtype_short(t)) for t in df.dtypes], f"{CELL};opacity:.55;{RULE}"
-    )
+    head = _tr([f"<b>{escape(c)}</b>" for c in df.columns], f";{RULE}")
+    types = _tr([escape(dtype_short(t)) for t in df.dtypes], f";opacity:.55;{RULE}")
     rows = display_rows(df, digits)
     written = rows[:page_size] if pages else rows
     body = [
-        _tr([cell(v) for v in row], CELL, ZEBRA if i % 2 else "")
+        _tr([cell(v) for v in row], "", ZEBRA if i % 2 else "")
         for i, row in enumerate(written)
     ]
 
@@ -99,14 +98,21 @@ def table_html(
         )
 
     root = "<div>"
-    pager = script = data = ""
+    foot = f"<small data-foot style='{small}'>{rows_label(len(written), total)}</small>"
+    script = data = ""
     if pages:
         uid = f"table3-{uuid.uuid4().hex}"
-        label = _html.escape(pages_label(df.height, total))
-        root = f"<div id='{uid}' data-page-size='{page_size}' data-label='{label}'>"
-        pager = (
-            f"<div data-pager style='font:{MONO};margin:4px 0 0 0;display:none'>"
-            "</div>"
+        counted = "" if total is None else str(total)
+        root = (
+            f"<div id='{uid}' data-page-size='{page_size}' data-total='{counted}'>"
+        )
+        # The row and column counts on the left, the pager on the right.
+        foot = (
+            "<div data-bar style='display:flex;flex-wrap:wrap;align-items:center;"
+            "gap:4px 12px;margin:2px 0 0 0'>"
+            + foot
+            + f"<div data-pager style='font:{MONO};margin-left:auto;display:none'>"
+            "</div></div>"
         )
         script = f"<script>{PAGER_JS.replace('__ID__', uid)}</script>"
         if len(written) < len(rows):
@@ -125,9 +131,7 @@ def table_html(
         + "</thead><tbody>"
         + "".join(body)
         + "</tbody></table></div>"
-        f"<small data-foot style='{small}'>"
-        f"{rows_label(len(written), total)}</small>"
-        + pager
+        + foot
         + data
         + "</div>"
         + script

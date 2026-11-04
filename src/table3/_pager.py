@@ -2,9 +2,11 @@
 
 # Column widths are measured once over all rows and pinned on the header, so
 # a column page keeps its columns, and every column its width, whichever row
-# page is shown; blank rows pad a short last page, and the page links fill a
-# fixed number of fixed-width slots, so Next stays put from page to page. The rows past the first page arrive as
-# JSON and are drawn into the table first. __ID__ is the table's root element.
+# page is shown; blank rows pad a short last page. The pager sits at the
+# right of the footer and the column arrows at the edges of the header, all
+# in space kept for them, so none moves from page to page. The rows past
+# the first page arrive as JSON and are drawn into the table first. __ID__
+# is the table's root element.
 PAGER_JS = """
 (function () {
   var root = document.getElementById("__ID__");
@@ -14,11 +16,15 @@ PAGER_JS = """
   var table = box.querySelector("table");
   var head = [].slice.call(table.tHead.rows);
   // Only the first page is written as cells; the rest come as JSON text,
-  // drawn here with the first page's cell style ("null", cut at 40 as there).
+  // drawn here with the first page's cell styles, one per column, so text
+  // stays left and numbers right ("null", cut at 40 as there).
+  var tb0 = table.tBodies[0];
+  var styles = tb0.rows[0] ? [].map.call(tb0.rows[0].cells, function (td) {
+    return td.getAttribute("style");
+  }) : [];
   var json = root.querySelector("script[type='application/json']");
   if (json) {
-    var tb = table.tBodies[0], first = tb.rows[0] && tb.rows[0].cells[0];
-    var style = first ? first.getAttribute("style") : "";
+    var tb = tb0;
     var esc = function (t) {
       return t.replace(/[&<>"']/g, function (ch) {
         return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#x27;" }[ch];
@@ -27,9 +33,9 @@ PAGER_JS = """
     var cells = "";
     JSON.parse(json.textContent).forEach(function (row) {
       cells += "<tr>";
-      row.forEach(function (v) {
+      row.forEach(function (v, j) {
         var t = v === null ? "null" : v, cut = t.length > 40;
-        cells += "<td style='" + style + "'" + (cut ? " title='" + esc(t) + "'" : "") + ">" +
+        cells += "<td style='" + styles[j] + "'" + (cut ? " title='" + esc(t) + "'" : "") + ">" +
           esc(cut ? t.slice(0, 39) + "…" : t) + "</td>";
       });
       cells += "</tr>";
@@ -39,7 +45,8 @@ PAGER_JS = """
   var body = [].slice.call(table.tBodies[0].rows);
   var foot = root.querySelector("[data-foot]");
   var pager = root.querySelector("[data-pager]");
-  var size = +root.dataset.pageSize, label = root.dataset.label;
+  var size = +root.dataset.pageSize;
+  var total = root.dataset.total === "" ? null : +root.dataset.total;
   var npages = Math.max(1, Math.ceil(body.length / size));
   // Every row is in the table now, so each column is as wide as its widest
   // value, name or type; pin it there, or hiding rows would narrow it.
@@ -52,14 +59,13 @@ PAGER_JS = """
   });
   // Blank rows fill a short last page, so the pager stays where it was.
   var pad = [], tb = table.tBodies[0];
-  var padStyle = body[0] && body[0].cells[0] ? body[0].cells[0].getAttribute("style") : "";
   for (var k = 0; npages > 1 && k < size - 1; k++) {
     var tr = document.createElement("tr");
     tr.setAttribute("aria-hidden", "true");
     tr.dataset.pad = "1";
-    widths.forEach(function () {
+    widths.forEach(function (_, j) {
       var td = document.createElement("td");
-      td.setAttribute("style", padStyle);
+      td.setAttribute("style", styles[j] || "");
       td.textContent = " ";
       tr.appendChild(td);
     });
@@ -71,9 +77,22 @@ PAGER_JS = """
     "box-sizing:border-box;border:1px solid transparent;border-radius:4px;" +
     "padding:1px 7px;margin:0 1px";
 
+  // A frame holds the table between two arrows at the header's edges, ◂ for
+  // the columns before and ▸ for those after. They show only when the
+  // columns don't all fit, and then keep their place whichever columns show.
+  var ARROW = 24;
+  var frame = document.createElement("div");
+  frame.style.cssText = "display:flex;align-items:flex-start;min-width:0";
+  box.parentNode.insertBefore(frame, box);
+  box.style.flex = "1 1 auto"; box.style.minWidth = "0";
+
   function group() {
-    var avail = box.clientWidth || Infinity, cur = [], w = 0;
-    seenWidth = box.clientWidth;
+    var outer = frame.clientWidth || Infinity, cur = [], w = 0;
+    seenWidth = frame.clientWidth;
+    var all = widths.reduce(function (a, b) { return a + b; }, 0);
+    var wide = all > outer;
+    colPrev.style.display = colNext.style.display = wide ? "" : "none";
+    var avail = wide ? outer - 2 * ARROW : outer;
     groups = [];
     widths.forEach(function (x, j) {
       if (cur.length && w + x > avail) { groups.push(cur); cur = []; w = 0; }
@@ -103,13 +122,6 @@ PAGER_JS = """
     else b.removeAttribute("aria-current");
   }
 
-  function span(parent, text) {
-    var s = document.createElement("span");
-    s.textContent = text; s.style.cssText = "opacity:.55;padding:0 4px;flex:none";
-    parent.appendChild(s);
-    return s;
-  }
-
   // Seven slots once there are more than seven pages: the first and last
   // page, the current one with its neighbours, and "…" for each run left
   // out. Near either end the slots fill with pages instead, so their count,
@@ -124,9 +136,15 @@ PAGER_JS = """
 
   pager.style.alignItems = "center";
   pager.style.whiteSpace = "nowrap";
-  var colPrev = button(pager, "◂ columns", function () { cpage--; render(); });
-  var colNext = button(pager, "columns ▸", function () { cpage++; render(); });
-  var colSep = span(pager, "|");
+  function arrow(text, title, go) {
+    var b = button(frame, text, go);
+    b.title = title; b.setAttribute("aria-label", title);
+    b.style.width = ARROW + "px"; b.style.padding = "0"; b.style.margin = "2px 0";
+    return b;
+  }
+  var colPrev = arrow("◂", "Previous columns", function () { cpage--; render(); });
+  frame.appendChild(box);
+  var colNext = arrow("▸", "Next columns", function () { cpage++; render(); });
   var prev = button(pager, "Previous", function () { page--; render(); });
   var nums = document.createElement("span");
   nums.style.cssText = "display:flex;flex:none";
@@ -139,6 +157,18 @@ PAGER_JS = """
     return b;
   });
   var next = button(pager, "Next", function () { page++; render(); });
+
+  // "Rows 11–20 of 344", and when n cut the rows, what was previewed of how
+  // many: "Rows 11–20 of 1,000 previewed (52,341 total)".
+  function count(k) { return k.toLocaleString("en-US"); }
+  function rowsText(lo, hi) {
+    var n = body.length;
+    var text = n > size ? "Rows " + count(lo + 1) + "–" + count(hi) + " of " + count(n)
+      : count(n) + (n === 1 ? " row" : " rows");
+    if (total === null) return text + " previewed (total not counted)";
+    if (total > n) return text + " previewed (" + count(total) + " total)";
+    return text;
+  }
 
   function render() {
     page = Math.min(page, npages - 1);
@@ -156,15 +186,14 @@ PAGER_JS = """
       [].forEach.call(tr.cells, function (td, j) { td.style.display = keep[j] ? "" : "none"; });
     });
 
-    var text = body.length > size ? (lo + 1) + "–" + hi + " of " + label : label;
-    if (groups.length > 1)
-      text += " | " + (cols[0] + 1) + "–" + (cols[cols.length - 1] + 1) +
-        " of " + widths.length + " columns";
-    foot.textContent = text;
+    var a = cols[0] + 1, z = cols[cols.length - 1] + 1;
+    foot.textContent = rowsText(lo, hi) + " | " + (groups.length === 1
+      ? widths.length + (widths.length === 1 ? " column" : " columns")
+      : a === z ? "Column " + a + " of " + widths.length
+      : "Columns " + a + "–" + z + " of " + widths.length);
 
-    var wide = groups.length > 1, paged = npages > 1;
-    colPrev.style.display = colNext.style.display = wide ? "" : "none";
-    colSep.style.display = wide && paged ? "" : "none";
+    var paged = npages > 1;
+    colPrev.style.height = colNext.style.height = table.tHead.offsetHeight + "px";
     state(colPrev, cpage > 0);
     state(colNext, cpage < groups.length - 1);
     [prev, nums, next].forEach(function (el) { el.style.display = paged ? "" : "none"; });
@@ -182,7 +211,7 @@ PAGER_JS = """
         state(b, p !== page, p === page);
       }
     });
-    pager.style.display = wide || paged ? "flex" : "none";
+    pager.style.display = paged ? "flex" : "none";
   }
 
   group();
@@ -190,7 +219,7 @@ PAGER_JS = """
   render();
   if (window.ResizeObserver)
     new ResizeObserver(function () {
-      if (box.clientWidth !== seenWidth) { group(); render(); }
-    }).observe(box);
+      if (frame.clientWidth !== seenWidth) { group(); render(); }
+    }).observe(frame);
 })();
 """

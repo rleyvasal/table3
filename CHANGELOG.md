@@ -10,6 +10,15 @@
   numbers and dates, contains for text, a pick-list for few values), and
   once applied it reads as a label such as `10–50 ×`, where × clears it.
   Turning Filter off clears every filter.
+- The paged table lines text up on the left and numbers, dates and times
+  on the right, names and types with them, as `view()` does; before,
+  every column was on the right.
+- The paged table's controls move to RStudio's places: ◂ and ▸ for the
+  columns before and after sit at the header's edges, the row and column
+  counts at the bottom left, and Previous / pages / Next at the bottom
+  right. When *n* cut the rows the counts say so plainly: "Rows 1–10 of
+  1,000 previewed (52,341 total)", instead of "1–10 of 1,000 rows (first
+  1,000 of 52,341)".
 
 ## 0.5.1 — 2026-11-03
 

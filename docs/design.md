@@ -38,17 +38,24 @@ used it yet, so it is gone rather than deprecated.
   `pl.Config(float_precision=)`, unless `digits=` asks for significant
   digits (§2.1); values longer than 40 characters cut with
   "…", the full value on hover.
-- Ten rows a page (`page_size=`), Previous / page numbers / Next, and as many
-  columns as fit the cell with `◂ columns` / `columns ▸` for the rest. Column
-  groups are measured once over all *n* rows, so they don't shift between
-  pages, and they are regrouped when the cell's width changes. Each column
-  is pinned at that width, a short last page is padded with blank rows, and
-  past seven pages the links fill seven fixed-width slots (`1 … 4 5 6 … 21`,
-  or five pages and `…` near an end), so Next keeps its place on every page,
-  as in RStudio's paged table.
-- The footer counts rows and columns ("21–30 of 344 rows | 10–12 of 12
-  columns") and says when *n* cut the rows ("1–10 of 100 rows (first 100 of
-  52,341)").
+- Text, booleans and the rest line up on the left, numbers, dates and times
+  on the right, with their names and types; `view()` lines them up the
+  same way.
+- Ten rows a page (`page_size=`), and as many columns as fit the cell, with
+  ◂ and ▸ at the header's left and right edges for the columns before and
+  after. Column groups are measured once over all *n* rows, so they don't
+  shift between pages, and they are regrouped when the cell's width
+  changes.
+- Under the table, as in RStudio's paged table: the counts on the left,
+  "Rows 21–30 of 344 | Columns 10–12 of 12", and Previous / page numbers /
+  Next on the right. When *n* cut the rows the counts say what was
+  previewed of how many: "Rows 1–10 of 100 previewed (52,341 total)", or
+  "(total not counted)".
+- Nothing moves from page to page: each column is pinned at its measured
+  width, a short last page is padded with blank rows, the pager is
+  anchored at the right, past seven pages its links fill seven
+  fixed-width slots (`1 … 4 5 6 … 21`, or five pages and `…` near an end),
+  and the column arrows keep their place, dimmed at either end.
 
 ### 2.1 Float digits
 

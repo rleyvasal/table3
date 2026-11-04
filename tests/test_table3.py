@@ -42,7 +42,7 @@ def test_first_page_as_cells_every_row_as_json(islands):
     assert len(rows) == 29 and rows[28] == ["island 28"]
     assert "max-height:300px" in html
     assert "showing first 10 of 29 rows<" in html  # the footer without scripts
-    assert "data-label='29 rows'" in html
+    assert "data-total='29'" in html
 
 
 def test_one_page_or_less_needs_no_json(islands):
@@ -75,7 +75,7 @@ def test_row_limit_labelled():
     html = table3.html(pl.DataFrame({"x": range(2500)}), n=1000)
     assert _body_rows(html) == 10 and len(_json_rows(html)) == 1000
     assert "showing first 10 of 2,500 rows<" in html
-    assert "data-label='1,000 rows (first 1,000 of 2,500)'" in html
+    assert "data-total='2500'" in html
     assert "shape: (2500, 1)" in html
 
 
@@ -92,7 +92,7 @@ def test_table3_hook_gives_rows_count_and_caption():
     assert ">Frame (view)<" in html
     assert "shape: (?, 1)" in html
     assert "showing first 10 of more rows" in html
-    assert "(first 10 of more)" in html
+    assert "data-total=''" in html
     assert ">Mine<" in table3.html(frame, caption="Mine")
 
 
@@ -194,7 +194,7 @@ def test_pages_script_targets_its_table(islands):
     html = table3.html(islands, page_size=5)
     uid = re.search(r"<div id='(table3-[0-9a-f]{32})'", html).group(1)
     assert f'document.getElementById("{uid}")' in html
-    assert "data-page-size='5'" in html and "data-label='29 rows'" in html
+    assert "data-page-size='5'" in html and "data-total='29'" in html
     assert html.count("<script>") == 1 and html.endswith("</script>")
     assert uid not in table3.html(islands)  # each output pages its own table
 
@@ -235,3 +235,10 @@ def test_arguments_checked():
         with pytest.raises(ValueError, match="digits"):
             table3.html(pl.DataFrame({"x": [1.0]}), digits=bad)
 
+
+
+def test_text_left_numbers_right_in_the_cells():
+    html = table3.html(pl.DataFrame({"s": ["a"], "n": [1]}), pages=False)
+    first = html.split("<tbody>")[1].split("</tr>")[0]
+    assert first.count("text-align:left") == 1 and first.count("text-align:right") == 1
+    assert first.index("text-align:left") < first.index("text-align:right")
