@@ -113,10 +113,17 @@ prints its frames as this table by returning `table3.html(self, n=…)` from
 
 | Package | Change | Dependency |
 |---|---|---|
-| tidy3 | `TidyFrame._repr_html_` returns `table3.html(self, n=preview_max, page_size=preview_rows, digits=preview_digits)` from `options()`; `TidyFrame.__table3__` from `_preview_parts` (respects `preview_count`), caption `TidyFrame (preview groups=[…])`. No verb: every frame in a cell prints this way | `table3>=0.3,<0.4` |
+| tidy3 | `TidyFrame._repr_html_` returns `table3.html(self, n=preview_max, page_size=preview_rows, digits=preview_digits)` from `options()`; `TidyFrame.__table3__` from `_preview_parts` (respects `preview_count`), caption `TidyFrame (preview groups=[…])`. No verb: every frame in a cell prints this way | `table3>=0.5.1,<1` |
 | stats3 | Result tables are polars, so `table3.show(table)` works as is; its own result objects may return `table3.html` from `_repr_html_` | optional at first |
-| tidy3a | `TidyArray.__table3__` through `as_table` | extra `tidy3a[view]` (tidy3a has no polars) |
+| tidy3a | `TidyArray.__table3__` through `as_table` | extra `tidy3a[table3]`, `table3>=0.5.1,<1` (tidy3a has no polars) |
 | plot3, tidy3syntax | none | none |
+
+Callers cap table3 below 1.0, not below its next minor version, so a new
+table3 reaches them without a release of their own. table3 keeps `html()`,
+`show()`, `view()`, their keywords and the `__table3__` hook working
+through its 0.x releases; anything it removes is deprecated first, and a
+break that can't be is 1.0. A caller raises its floor when it needs a
+table3 fix, so upgrading the caller pulls the fix in.
 
 None of them exports `show` or `view` bare, so `from … import *` in any order
 leaves the names alone.
