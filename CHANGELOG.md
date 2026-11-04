@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- A cell that ends in `view()` shows the explorer alone. `view()` returns
+  its data, and Jupyter printed that data again under the explorer, as a
+  paged table; now, as R's `View()` returns invisibly, the notebook skips
+  printing it. The data is still returned: assigned, piped on, or on a
+  later line or in a later cell, it prints as usual. This covers
+  `table3.view(df)` for polars and pandas and every package that passes
+  its data through `table3.view()`, including tidy3's `view()` before
+  tidy3 0.20.3.
+
 ## 0.6.0 — 2026-11-03
 
 ### Changed

@@ -60,8 +60,12 @@ table3.autohide(on=True)  # whether view() hides its cell from SolveIt's AI
 ```
 
 *data* is anything `html()` and `show()` take, `__table3__` objects
-included. It returns *data* unchanged, like `show()`; `;` hides the
-notebook's own print of it. Outside a notebook it prints the first rows as
+included. It returns *data* unchanged, like `show()`, but a cell that ends
+in `view()` doesn't print it under the explorer, as R's `View()` returns
+invisibly (0.6.1): `view()` wraps IPython's `sys.displayhook` until the cell
+ends and skips *data* when it is printed as the value of the statement
+that called `view()`. `view(df); df`, a value piped on from `view()`, and
+*data* in a later cell print as usual. Outside a notebook it prints the first rows as
 `show()` does.
 
 In SolveIt, which sends each cell's code and output to its AI, `view()`

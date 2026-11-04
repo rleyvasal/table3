@@ -26,7 +26,7 @@ import polars as pl
 
 from table3.__version__ import __version__
 from table3._html import table_html
-from table3 import _solveit
+from table3 import _quiet, _solveit
 from table3._solveit import autohide
 
 __all__ = ["__version__", "autohide", "html", "show", "view"]
@@ -182,6 +182,11 @@ def view(
     output scripts don't run, it shows the first 100 rows as ``show()``.
     Outside a notebook it prints the first rows.
 
+    A cell that ends in ``view()`` shows the explorer alone, not *data* a
+    second time, as R's ``View()`` returns invisibly. *data* is still
+    returned: piped on, assigned, or on a later line or in a later cell, it
+    displays as usual.
+
     In SolveIt, which sends every cell's code and output to its AI, the
     cell is then hidden from the AI (SolveIt's red eye), so the rows don't
     fill its context. *hide* says whether to, for this call: ``True`` or
@@ -204,5 +209,6 @@ def view(
         print(_text(data, min(n, 20), digits))
     elif _solveit.AUTOHIDE if hide is None else hide:
         _solveit.hide_calling_cell()
+    _quiet.return_quietly(data)
     return data
 
