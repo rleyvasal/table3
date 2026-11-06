@@ -41,13 +41,16 @@ used it yet, so it is gone rather than deprecated.
 - Text, booleans and the rest line up on the left, numbers, dates and times
   on the right, with their names and types; `view()` lines them up the
   same way.
-- Ten rows a page (`page_size=`), and as many columns as fit the cell, with
-  ◂ and ▸ at the header's left and right edges for the columns before and
-  after. Column groups are measured once over all *n* rows, so they don't
-  shift between pages, and they are regrouped when the cell's width
-  changes.
+- Ten rows a page (`page_size=`). A table wider than the cell scrolls
+  sideways (0.8.0), as marimo's table and VS Code's Data Wrangler do: a
+  thin scrollbar under it, a soft shadow at each edge that has columns past
+  it, and the footer naming the columns at least half in view. Arrow keys
+  scroll it once it has focus. Before 0.8.0, as RStudio's paged table
+  does, ◂ and ▸ at the header's edges paged through groups of columns that
+  fit; that hid neighbouring columns from each other across a group's edge
+  and took a click per group, where every other Python grid scrolls.
 - Under the table, as in RStudio's paged table: the counts on the left,
-  "Rows 21–30 of 344 | Columns 10–12 of 12", and Previous / page numbers /
+  "Rows 21–30 of 344 | Columns 10–12 of 12" (updated as it scrolls), and Previous / page numbers /
   Next on the right. When *n* cut the rows the counts say what was
   previewed of how many: "Rows 1–10 of 100 previewed (52,341 total)", or
   "(total not counted)".
@@ -55,7 +58,7 @@ used it yet, so it is gone rather than deprecated.
   width, a short last page is padded with blank rows, the pager is
   anchored at the right, past seven pages its links fill seven
   fixed-width slots (`1 … 4 5 6 … 21`, or five pages and `…` near an end),
-  and the column arrows keep their place, dimmed at either end.
+  and turning a page keeps the columns scrolled to.
 
 ### 2.1 Float digits
 

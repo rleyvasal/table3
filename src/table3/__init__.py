@@ -1,8 +1,8 @@
 """Paged, theme-aware tables in notebook output.
 
 ``table3.html(data)`` is a table of up to *n* rows shown ten at a time, with
-Previous / page / Next buttons and, for wide data, as many columns as fit
-the cell plus arrows to the rest: what a package returns from its frames'
+Previous / page / Next buttons, scrolling sideways when wide data doesn't
+fit the cell: what a package returns from its frames'
 ``_repr_html_`` so they print as R notebooks print data frames.
 ``table3.show(data)`` displays the same table and returns *data* unchanged.
 ``table3.view(data)`` opens a data explorer instead, as R's ``View()``: a

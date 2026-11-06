@@ -22,7 +22,7 @@ cells = [
     ("md", "## The same as a scroll box (`pages=False`)"),
     ("code", 'table3.show(penguins.select("body_mass_g").unique().sort("body_mass_g"), '
              "pages=False, height=300);"),
-    ("md", "## Wide: column pages"),
+    ("md", "## Wide: scroll sideways"),
     ("code", "table3.show(penguins.with_columns(\n"
              '    bill_ratio=pl.col("bill_length_mm") / pl.col("bill_depth_mm"),\n'
              '    mass_kg=pl.col("body_mass_g") / 1000,\n'

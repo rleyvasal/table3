@@ -79,16 +79,41 @@ def test_drawn_rows_keep_the_formatting(show):
     assert page.locator("tbody b").count() == 0
 
 
-def test_column_pages_over_drawn_rows(show):
-    wide = pl.DataFrame({f"column_{c}": [f"value {r}-{c}" for r in range(25)] for c in range(12)})
-    page = show(wide, width=600)
+WIDE = pl.DataFrame({f"column_{c}": [f"value {r}-{c}" for r in range(25)] for c in range(12)})
+
+
+def _scroll(page, to) -> None:
+    page.eval_on_selector("[data-box]", f"b => {{ b.scrollLeft = {to}; }}")
+    page.wait_for_timeout(100)
+
+
+def _shades(page) -> dict:
+    return page.evaluate("""() => Object.fromEntries([...document.querySelectorAll('[data-shade]')]
+      .map(s => [s.dataset.shade, s.style.opacity]))""")
+
+
+def test_wide_tables_scroll_sideways(show):
+    page = show(WIDE, width=600)
     foot = _foot(page)
     assert foot.startswith("Rows 1–10 of 25 | Columns 1–") and foot.endswith(" of 12")
-    shown = len(_visible(page)[0])
-    page.locator("button[aria-label='Next columns']").click()
-    assert _visible(page)[0][0] == f"value 0-{shown}"
-    _click(page, "Next")
-    assert _visible(page)[0][0] == f"value 10-{shown}"
+    assert len(_visible(page)[0]) == 12  # every column is in the table, scrolled to
+    box = page.eval_on_selector("[data-box]", "b => [b.scrollWidth, b.clientWidth, b.tabIndex]")
+    assert box[0] > box[1] and box[2] == 0  # wider than the cell; arrow keys scroll it
+    assert _shades(page) == {"left": "0", "right": "1"}
+    _scroll(page, 10_000)
+    assert _foot(page).endswith("–12 of 12") and _shades(page) == {"left": "1", "right": "0"}
+    _click(page, "Next")  # turning the page keeps the columns in view
+    assert _foot(page).startswith("Rows 11–20 of 25 | Columns ") and _foot(page).endswith("–12 of 12")
+    _scroll(page, 300)
+    assert _shades(page) == {"left": "1", "right": "1"}
+    assert page.locator("button[aria-label$='columns']").count() == 0  # no column arrows
+
+
+def test_a_table_that_fits_neither_scrolls_nor_shades(show):
+    page = show(FRAME)
+    assert _foot(page) == "Rows 1–10 of 35 | 2 columns"
+    assert _shades(page) == {"left": "0", "right": "0"}
+    assert page.eval_on_selector("[data-box]", "b => b.hasAttribute('tabindex')") is False
 
 
 def _layout(page) -> dict:
@@ -170,24 +195,3 @@ def test_counts_left_pager_right(show):
     assert box["foot"]["x"] == box["bar"]["x"]
     assert box["pager"]["x"] + box["pager"]["width"] == box["bar"]["x"] + box["bar"]["width"]
     assert abs(box["foot"]["y"] - box["pager"]["y"]) < 6  # one line, side by side
-    assert not page.locator("button[aria-label='Next columns']").is_visible()
-
-
-def test_column_arrows_at_the_header_edges(show):
-    wide = pl.DataFrame({f"column_{c}": [f"value {r}-{c}" for r in range(25)] for c in range(12)})
-    page = show(wide, width=600)
-    edges = page.evaluate("""() => {
-      const r = s => document.querySelector(s).getBoundingClientRect();
-      return {prev: r("button[aria-label='Previous columns']"),
-              next: r("button[aria-label='Next columns']"),
-              head: r('thead'), table: r('table')};
-    }""")
-    assert edges["prev"]["x"] + edges["prev"]["width"] <= edges["table"]["x"]
-    assert edges["next"]["x"] >= edges["table"]["x"] + edges["table"]["width"]
-    assert edges["prev"]["y"] == edges["head"]["y"] == edges["next"]["y"]
-    assert page.locator("button[aria-label='Previous columns']").get_attribute("aria-disabled") == "true"
-    before = edges["next"]
-    page.locator("button[aria-label='Next columns']").click()
-    after = page.locator("button[aria-label='Next columns']").bounding_box()
-    assert (after["x"], after["y"]) == (before["x"], before["y"])
-    assert page.locator("[data-pager] button", has_text="columns").count() == 0

@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- A paged table wider than its cell scrolls sideways, as marimo's table
+  and VS Code's Data Wrangler do, instead of paging through groups of
+  columns with ◂ and ▸: drag the scrollbar, swipe, or Shift+scroll to any
+  column, and see any columns side by side. A shadow at an edge says there
+  are more columns past it, and the footer names those in view ("Columns
+  4–9 of 24"), updated as it scrolls. Turning a row page keeps the columns
+  scrolled to.
+
 ## 0.7.1 — 2026-11-06
 
 ### Fixed

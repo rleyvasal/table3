@@ -1,12 +1,13 @@
 """The script that pages a table3 table in place."""
 
 # Column widths are measured once over all rows and pinned on the header, so
-# a column page keeps its columns, and every column its width, whichever row
-# page is shown; blank rows pad a short last page. The pager sits at the
-# right of the footer and the column arrows at the edges of the header, all
-# in space kept for them, so none moves from page to page. The rows past
-# the first page arrive as JSON and are drawn into the table first. __ID__
-# is the table's root element.
+# every column keeps its width whichever row page is shown; blank rows pad a
+# short last page, so the pager at the right of the footer never moves. A
+# table wider than its cell scrolls sideways, as marimo's and Data Wrangler's
+# do: a thin scrollbar under it, a shadow at an edge with more columns past
+# it, and the footer naming the columns in view ("Columns 4–9 of 24"). The
+# rows past the first page arrive as JSON and are drawn into the table
+# first. __ID__ is the table's root element.
 PAGER_JS = """
 (function () {
   var root = document.getElementById("__ID__");
@@ -72,34 +73,54 @@ PAGER_JS = """
     tb.appendChild(tr);
     pad.push(tr);
   }
-  var page = 0, cpage = 0, groups = [], seenWidth = -1;
+  var page = 0;
   var BTN = "font:inherit;color:inherit;background:none;cursor:pointer;flex:none;" +
     "box-sizing:border-box;border:1px solid transparent;border-radius:4px;" +
     "padding:1px 7px;margin:0 1px";
 
-  // A frame holds the table between two arrows at the header's edges, ◂ for
-  // the columns before and ▸ for those after. They show only when the
-  // columns don't all fit, and then keep their place whichever columns show.
-  var ARROW = 24;
+  // Sideways scrolling: the box scrolls, a frame round it holds a shadow at
+  // each edge that has columns past it, and the footer names those in view.
   var frame = document.createElement("div");
-  frame.style.cssText = "display:flex;align-items:flex-start;min-width:0";
+  frame.style.cssText = "position:relative;min-width:0";
   box.parentNode.insertBefore(frame, box);
-  box.style.flex = "1 1 auto"; box.style.minWidth = "0";
+  frame.appendChild(box);
+  box.style.overflowX = "auto";
+  box.style.scrollbarWidth = "thin";
+  function shade(side) {
+    var s = document.createElement("div");
+    s.dataset.shade = side;
+    s.setAttribute("aria-hidden", "true");
+    s.style.cssText = "position:absolute;top:0;bottom:0;width:18px;pointer-events:none;" +
+      "transition:opacity .15s;opacity:0;" + side + ":0;background:linear-gradient(to " +
+      (side === "left" ? "right" : "left") + ",rgba(127,127,127,.35),rgba(127,127,127,0))";
+    frame.appendChild(s);
+    return s;
+  }
+  var shadeLeft = shade("left"), shadeRight = shade("right");
+  var lefts = [], acc = 0;
+  widths.forEach(function (x) { lefts.push(acc); acc += x; });
 
-  function group() {
-    var outer = frame.clientWidth || Infinity, cur = [], w = 0;
-    seenWidth = frame.clientWidth;
-    var all = widths.reduce(function (a, b) { return a + b; }, 0);
-    var wide = all > outer;
-    colPrev.style.display = colNext.style.display = wide ? "" : "none";
-    var avail = wide ? outer - 2 * ARROW : outer;
-    groups = [];
+  // The columns at least half in view, as "Columns 4–9 of 24".
+  function columnsText() {
+    var n = widths.length;
+    if (box.scrollWidth <= box.clientWidth + 1) return n + (n === 1 ? " column" : " columns");
+    var lo = box.scrollLeft, hi = lo + box.clientWidth, a = -1, z = -1;
     widths.forEach(function (x, j) {
-      if (cur.length && w + x > avail) { groups.push(cur); cur = []; w = 0; }
-      cur.push(j); w += x;
+      var seen = Math.min(hi, lefts[j] + x) - Math.max(lo, lefts[j]);
+      if (seen >= Math.min(x, box.clientWidth) / 2) { if (a < 0) a = j; z = j; }
     });
-    groups.push(cur);
-    cpage = Math.min(cpage, groups.length - 1);
+    if (a < 0) { a = z = 0; }
+    return a === z ? "Column " + (a + 1) + " of " + n
+      : "Columns " + (a + 1) + "–" + (z + 1) + " of " + n;
+  }
+  function edges() {
+    var wide = box.scrollWidth > box.clientWidth + 1;
+    shadeLeft.style.opacity = wide && box.scrollLeft > 1 ? "1" : "0";
+    shadeRight.style.opacity =
+      wide && box.scrollLeft + box.clientWidth < box.scrollWidth - 1 ? "1" : "0";
+    // A wide table takes keyboard focus, so arrow keys scroll it too.
+    if (wide) { box.tabIndex = 0; box.setAttribute("aria-label", "Table: scroll sideways for more columns"); }
+    else { box.removeAttribute("tabindex"); box.removeAttribute("aria-label"); }
   }
 
   // The controls are made once and only restyled, so a focused button keeps
@@ -136,15 +157,6 @@ PAGER_JS = """
 
   pager.style.alignItems = "center";
   pager.style.whiteSpace = "nowrap";
-  function arrow(text, title, go) {
-    var b = button(frame, text, go);
-    b.title = title; b.setAttribute("aria-label", title);
-    b.style.width = ARROW + "px"; b.style.padding = "0"; b.style.margin = "2px 0";
-    return b;
-  }
-  var colPrev = arrow("◂", "Previous columns", function () { cpage--; render(); });
-  frame.appendChild(box);
-  var colNext = arrow("▸", "Next columns", function () { cpage++; render(); });
   var prev = button(pager, "Previous", function () { page--; render(); });
   var nums = document.createElement("span");
   nums.style.cssText = "display:flex;flex:none";
@@ -173,8 +185,6 @@ PAGER_JS = """
   function render() {
     page = Math.min(page, npages - 1);
     var lo = page * size, hi = Math.min(lo + size, body.length);
-    var cols = groups[cpage], keep = {};
-    cols.forEach(function (j) { keep[j] = 1; });
     body.forEach(function (tr, i) {
       var on = i >= lo && i < hi;
       tr.style.display = on ? "" : "none";
@@ -182,20 +192,10 @@ PAGER_JS = """
     });
     var blanks = npages > 1 ? size - (hi - lo) : 0;
     pad.forEach(function (tr, k) { tr.style.display = k < blanks ? "" : "none"; });
-    head.concat(body.slice(lo, hi), pad.slice(0, blanks)).forEach(function (tr) {
-      [].forEach.call(tr.cells, function (td, j) { td.style.display = keep[j] ? "" : "none"; });
-    });
-
-    var a = cols[0] + 1, z = cols[cols.length - 1] + 1;
-    foot.textContent = rowsText(lo, hi) + " | " + (groups.length === 1
-      ? widths.length + (widths.length === 1 ? " column" : " columns")
-      : a === z ? "Column " + a + " of " + widths.length
-      : "Columns " + a + "–" + z + " of " + widths.length);
+    rowsShown = rowsText(lo, hi);
+    footer();
 
     var paged = npages > 1;
-    colPrev.style.height = colNext.style.height = table.tHead.offsetHeight + "px";
-    state(colPrev, cpage > 0);
-    state(colNext, cpage < groups.length - 1);
     [prev, nums, next].forEach(function (el) { el.style.display = paged ? "" : "none"; });
     nums.style.display = paged ? "flex" : "none";
     state(prev, page > 0);
@@ -214,12 +214,20 @@ PAGER_JS = """
     pager.style.display = paged ? "flex" : "none";
   }
 
-  group();
+  var rowsShown = "";
+  function footer() {
+    foot.textContent = rowsShown + " | " + columnsText();
+    edges();
+  }
+
   box.style.maxHeight = "none";
   render();
-  if (window.ResizeObserver)
-    new ResizeObserver(function () {
-      if (frame.clientWidth !== seenWidth) { group(); render(); }
-    }).observe(frame);
+  var pending = false;
+  box.addEventListener("scroll", function () {
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(function () { pending = false; footer(); });
+  });
+  if (window.ResizeObserver) new ResizeObserver(footer).observe(box);
 })();
 """
