@@ -10,7 +10,9 @@ snapshot's embedded rows, or a kernel's pages (``WIDGET_ESM``, the live
 explorer's widget, docs/explorer.md §2).
 """
 
-EXPLORER_CORE = r"""
+from table3._scrollbars import SCROLLBARS_JS
+
+EXPLORER_CORE = SCROLLBARS_JS + r"""
 // The grid over a snapshot (remote null: every row is in data.rows) or over a
 // kernel (remote.fetch(request) resolves to one page of rows, in blocks).
 function table3Explorer(root, data, remote) {
@@ -149,6 +151,7 @@ function table3Explorer(root, data, remote) {
   box.dataset.grid = "";
   box.style.cssText = "max-height:" + root.dataset.height + "px;overflow:auto;" +
     "scrollbar-color:rgba(127,127,127,.5) transparent;border-top:1px solid " + GREY;
+  table3Scrollbars(box);  // shown before the first scroll
   var table = document.createElement("table");
   table.style.cssText = "border-collapse:separate;border-spacing:0;table-layout:fixed;font:inherit";
   var thead = document.createElement("thead");

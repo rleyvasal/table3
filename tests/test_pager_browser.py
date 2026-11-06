@@ -195,3 +195,20 @@ def test_counts_left_pager_right(show):
     assert box["foot"]["x"] == box["bar"]["x"]
     assert box["pager"]["x"] + box["pager"]["width"] == box["bar"]["x"] + box["bar"]["width"]
     assert abs(box["foot"]["y"] - box["pager"]["y"]) < 6  # one line, side by side
+
+
+def test_the_scrollbar_shows_before_any_scroll():
+    """Overlay scrollbars hide until a scroll; table3 styles them so they always show.
+    Headless Chromium hides every scrollbar unless told not to."""
+    with sync_api.sync_playwright() as p:
+        try:
+            b = p.chromium.launch(ignore_default_args=["--hide-scrollbars"])
+        except Exception as e:
+            pytest.skip(f"no headless Chromium: {e}")
+        page = b.new_page(viewport={"width": 600, "height": 700})
+        page.set_content(f"<!doctype html><html><body>{table3.html(WIDE)}{table3.html(WIDE)}</body></html>")
+        got = page.eval_on_selector_all("[data-box]", """bs => bs.map(b => ({
+          marked: b.hasAttribute('data-t3-scroll'), bar: b.offsetHeight - b.clientHeight}))""")
+        styles = page.evaluate("() => document.querySelectorAll('#table3-scrollbars').length")
+        b.close()
+    assert got == [{"marked": True, "bar": 10}] * 2 and styles == 1  # one style for the page

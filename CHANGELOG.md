@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- A wide table's scrollbar shows from the start, under the paged table
+  and the explorer, where macOS's overlay scrollbars stayed hidden until a
+  scroll, so a mouse had nothing to drag (VS Code, Chrome, Edge, Safari;
+  Firefox keeps its own). Clicking a table to scroll it with the keys no
+  longer draws a focus ring round it; moving to it with Tab still does.
+
 ## 0.8.0 — 2026-11-06
 
 ### Changed

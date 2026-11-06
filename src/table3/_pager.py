@@ -8,8 +8,11 @@
 # it, and the footer naming the columns in view ("Columns 4–9 of 24"). The
 # rows past the first page arrive as JSON and are drawn into the table
 # first. __ID__ is the table's root element.
+from table3._scrollbars import SCROLLBARS_JS
+
 PAGER_JS = """
 (function () {
+""" + SCROLLBARS_JS + """
   var root = document.getElementById("__ID__");
   if (!root || root.dataset.paged) return;
   root.dataset.paged = "1";
@@ -86,6 +89,7 @@ PAGER_JS = """
   frame.appendChild(box);
   box.style.overflowX = "auto";
   box.style.scrollbarWidth = "thin";
+  table3Scrollbars(box);  // shown before the first scroll
   function shade(side) {
     var s = document.createElement("div");
     s.dataset.shade = side;
@@ -231,3 +235,6 @@ PAGER_JS = """
   if (window.ResizeObserver) new ResizeObserver(footer).observe(box);
 })();
 """
+
+# Every paged table carries this script, so its comment-only lines stay here.
+PAGER_JS = "\n".join(line for line in PAGER_JS.splitlines() if not line.lstrip().startswith("//"))

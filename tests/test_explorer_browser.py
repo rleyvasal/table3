@@ -415,3 +415,12 @@ def test_a_cut_snapshot_says_what_it_exports(explore):
     page.locator("[data-export-menu]").click()
     assert "3 snapshot rows" in page.eval_on_selector("[data-export-scope]", "s => s.textContent")
     assert "run the cell to export every row" in page.eval_on_selector("[data-export-note]", "s => s.textContent")
+
+
+def test_the_grid_scrollbars_show_before_any_scroll(explore):
+    page = explore(EXPORTED)
+    got = page.eval_on_selector("[data-grid]", """b => ({
+      marked: b.hasAttribute('data-t3-scroll'),
+      color: b.style.scrollbarColor,
+      styles: document.querySelectorAll('#table3-scrollbars').length})""")
+    assert got == {"marked": True, "color": "", "styles": 1}
