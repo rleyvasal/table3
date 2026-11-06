@@ -44,6 +44,15 @@ def _column(s: pl.Series, digits: int | str | None) -> tuple[dict, list, list | 
     """The column's header entry, its raw values, and its display text where it differs."""
     kind = _kind(s)
     head = {"name": s.name, "type": dtype_short(s.dtype), "kind": kind}
+    raw, shown = cells(s, kind, digits)
+    if kind == "choice":
+        head["choices"] = sorted({v for v in raw if v is not None})
+    return head, raw, shown
+
+
+def cells(s: pl.Series, kind: str, digits: int | str | None) -> tuple[list, list | None]:
+    """*s*'s values as the script reads them (JSON-safe), and its display text
+    where that differs; shared by the embedded rows and the live pages."""
     values = s.to_list()
     shown = None
     if s.dtype.is_float():
@@ -61,9 +70,7 @@ def _column(s: pl.Series, digits: int | str | None) -> tuple[dict, list, list | 
         raw = values
     else:
         raw = [None if v is None else str(v) for v in values]
-    if kind == "choice":
-        head["choices"] = sorted({v for v in raw if v is not None})
-    return head, raw, shown
+    return raw, shown
 
 
 def payload(df: pl.DataFrame, total: int | None, n: int, digits: int | str | None) -> dict:
@@ -83,6 +90,10 @@ def payload(df: pl.DataFrame, total: int | None, n: int, digits: int | str | Non
     }
 
 
+def new_uid() -> str:
+    return f"table3-explore-{uuid.uuid4().hex}"
+
+
 def explorer_html(
     df: pl.DataFrame,
     total: int | None,
@@ -91,8 +102,12 @@ def explorer_html(
     n: int,
     height: int,
     digits: int | str | None,
+    uid: str | None = None,
+    live: bool = False,
 ) -> str:
-    uid = f"table3-explore-{uuid.uuid4().hex}"
+    """The explorer over *df*'s rows. *live*: a live explorer (``_live``)
+    is displayed after it, under *uid*, and this is its snapshot."""
+    uid = uid or new_uid()
     fallback = table_html(
         df.head(FALLBACK_ROWS), total, None, pages=False, page_size=10,
         height=300, digits=digits,
@@ -108,7 +123,17 @@ def explorer_html(
             f"<div style='font:{MONO};opacity:.85;margin:0 0 4px 0'>"
             f"{_html.escape(caption)}</div>"
         )
-    data = json_for_script(payload(df, total, n, digits))
+    data = payload(df, total, n, digits)
+    # Profiles: each column's bins or top values, which the script recounts
+    # over the rows its filters keep (_profile).
+    from table3._source import Source
+
+    source = Source(df, digits=digits)
+    data["layouts"] = source.layouts
+    data["date_bins"] = source.date_bins()
+    if live:
+        data["live"] = True
+    data = json_for_script(data)
     return (
         f"<div id='{uid}' data-height='{height}' style='font:{MONO}'>"
         + cap

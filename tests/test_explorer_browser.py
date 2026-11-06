@@ -5,6 +5,7 @@ python -m playwright install chromium. Skipped without them.
 """
 
 import datetime as dt
+import math
 import random
 
 import polars as pl
@@ -270,3 +271,147 @@ def test_alignment_matches_the_paged_table(explore):
         '[data-grid] thead tr:nth-child(-n+2), [data-grid] tbody tr[data-row]')]
       .map(tr => [...tr.cells].slice(1).map(td => getComputedStyle(td).textAlign))""")
     assert len(rows) == 4 and all(r == want for r in rows)  # name, type, two rows
+
+
+# -- profiles -----------------------------------------------------------------
+
+PROFILED = pl.DataFrame({
+    "x": [i % 37 if i % 11 else None for i in range(400)],
+    "f": [[0.5, float("nan"), float("inf"), -2.5, None, 1e8, 3.3][i % 7] for i in range(400)],
+    "species": [["Adelie", "Gentoo", "Chinstrap", None, "Adelie"][i % 5] for i in range(400)],
+    "note": [f"item {i % 90}" for i in range(400)],
+    "ok": [[True, False, None][i % 3] for i in range(400)],
+    "day": [dt.date(2000 + i % 9, 1 + i % 12, 1) if i % 13 else None for i in range(400)],
+})
+
+PROFILE_DOM = """() => [...document.querySelectorAll('[data-grid] td[data-profile]')].map(td => ({
+  name: td.dataset.profile,
+  stats: (td.querySelector('[data-stats]') || {}).textContent,
+  title: td.title,
+  bars: Object.fromEntries([...td.querySelectorAll('rect[data-bin]')].map(
+    r => [r.dataset.bin, +r.getAttribute('height')]))}))"""
+
+
+def expected_profiles(source, request):
+    """What the profile row should show for *request*, from Python's counts."""
+    base, now = source.profile({}), source.profile(request)
+    out = {}
+    for col, lay, b, p in zip(source.columns, source.layouts, base["columns"], now["columns"]):
+        stats = f"{'≈' if p['approx'] else ''}{p['distinct']:,} distinct"
+        if p["missing"]:
+            stats += f" · {p['missing']:,} missing"
+        if lay["type"] == "hist":
+            most = max([1] + b["bins"])
+            bars = {str(i): n / most for i, n in enumerate(p["bins"]) if n}
+            out[col["name"]] = (stats, bars, None)
+        else:
+            total = sum(p["top"]) + p["other"]
+            # Math.round: halves up, where Python's round() goes to even.
+            tops = [f"{v}: {n:,} ({math.floor(100 * n / max(total, 1) + 0.5)}%)"
+                    for v, n in zip(lay["values"], p["top"])]
+            out[col["name"]] = (stats, {}, tops)
+    return out
+
+
+def _check_profiles(page, source, request):
+    want = expected_profiles(source, request)
+    for got in page.evaluate(PROFILE_DOM):
+        stats, bars, tops = want[got["name"]]
+        assert got["stats"] == stats, got["name"]
+        assert got["bars"].keys() == bars.keys(), got["name"]
+        assert all(abs(got["bars"][k] - bars[k]) < 1e-9 for k in bars), got["name"]
+        if tops:
+            assert got["title"].split("\n")[: len(tops)] == tops, got["name"]
+
+
+def test_the_snapshot_profiles_match_python(explore):
+    """The browser's recount of each column, as filters change, is Python's."""
+    from table3._source import Source
+
+    page = explore(PROFILED)
+    source = Source(PROFILED)
+    assert page.eval_on_selector("[data-profile-basis]", "s => s.textContent") == "Profiles: all 400 rows"
+    _check_profiles(page, source, {})
+    for q in ("item 1", "adelie", "2003", "null", "nan"):
+        page.fill("input[type=search]", q)
+        n = len(source.order({"search": q}))
+        _wait_status(page, f"{n} of 400")
+        _check_profiles(page, source, {"search": q})
+    page.fill("input[type=search]", "")
+    cell = _edit(page, "x")
+    cell.locator("input[placeholder='from']").fill("5")
+    cell.locator("input[placeholder='to']").fill("9")
+    request = {"filters": {"x": {"from": 5, "to": 9}}}
+    _wait_status(page, f"{len(source.order(request))} of 400")
+    _check_profiles(page, source, request)
+
+
+def test_the_profile_row_hides(explore):
+    page = explore(PROFILED.head(20), total=1000)
+    basis = page.eval_on_selector("[data-profile-basis]", "s => s.textContent")
+    assert basis == "Profiles: these 20 snapshot rows"
+    page.locator("[data-profile-toggle]").click()
+    assert page.eval_on_selector("[data-grid] td[data-profile]", "td => td.offsetParent") is None
+    page.locator("[data-profile-toggle]").click()
+    assert page.eval_on_selector("[data-grid] td[data-profile]", "td => !!td.offsetParent")
+
+
+# -- columns and export --------------------------------------------------------
+
+EXPORTED = pl.DataFrame({
+    "x": [5, 3, None, 1, 4, 2],
+    "f": [0.1 + 0.2, float("nan"), float("inf"), -float("inf"), 2.0, None],
+    "s": ["a,b", 'say "hi"', "line\nbreak", None, "plain", "x"],
+    "ok": [True, False, None, True, True, False],
+    "day": [dt.date(2020, 1, d) for d in range(1, 7)],
+    "big": [2**60 + 1, 1, 2, 3, 4, 5],
+})
+
+
+def _download_csv(page) -> str:
+    page.locator("[data-export-menu]").click()
+    with page.expect_download() as info:
+        page.locator("[data-export='csv']").click()
+    return open(info.value.path()).read()
+
+
+def test_snapshot_csv_is_polars_csv_of_the_kept_rows(explore):
+    page = explore(EXPORTED)
+    assert _download_csv(page) == EXPORTED.write_csv()
+    page.keyboard.press("Escape")
+    _header(page, "x").click()
+    _header(page, "x").click()  # descending
+    cell = _edit(page, "x")
+    cell.locator("input[placeholder='from']").fill("2")
+    _wait_status(page, "4 of 6")
+    want = EXPORTED.filter(pl.col("x") >= 2).sort("x", descending=True)
+    assert _download_csv(page) == want.write_csv()
+    assert page.eval_on_selector("[data-export-scope]", "s => s.textContent") == \
+        "4 rows × 6 columns, as sorted"
+
+
+def test_hidden_columns_leave_the_grid_and_the_export(explore):
+    page = explore(EXPORTED)
+    page.locator("[data-columns-menu]").click()
+    page.locator("[data-column-toggle='f']").uncheck()
+    page.locator("[data-column-toggle='s']").uncheck()
+    assert page.locator("[data-columns-menu]").text_content() == "Columns 4/6"
+    assert len(_cells(page, 1)) == 5  # row number and four columns
+    assert not page.locator("td[title='Click to sort by f']").is_visible()
+    page.keyboard.press("Escape")
+    assert _download_csv(page) == EXPORTED.drop("f", "s").write_csv()
+    # The last column can't be hidden.
+    page.keyboard.press("Escape")
+    page.locator("[data-columns-menu]").click()
+    for name in ("x", "ok", "day"):
+        page.locator(f"[data-column-toggle='{name}']").uncheck()
+    page.locator("[data-column-toggle='big']").click()
+    assert page.locator("[data-column-toggle='big']").is_checked()
+    assert page.locator("[data-columns-menu]").text_content() == "Columns 1/6"
+
+
+def test_a_cut_snapshot_says_what_it_exports(explore):
+    page = explore(EXPORTED.head(3), total=100)
+    page.locator("[data-export-menu]").click()
+    assert "3 snapshot rows" in page.eval_on_selector("[data-export-scope]", "s => s.textContent")
+    assert "run the cell to export every row" in page.eval_on_selector("[data-export-note]", "s => s.textContent")

@@ -38,16 +38,16 @@ run() {
 pytest_job() {
   local env="$work/py$1"
   uv venv -q --python "$1+gil" "$env" &&
-    uv pip install -q --python "$env/bin/python" -e ".[dev]" &&
+    uv pip install -q --python "$env/bin/python" -e ".[dev,live]" &&
     "$env/bin/python" -m pytest -q -p no:cacheprovider
 }
 
 browser_job() {
   local env="$work/browser"
   uv venv -q --python 3.12 "$env" &&
-    uv pip install -q --python "$env/bin/python" -e ".[dev,browser]" &&
+    uv pip install -q --python "$env/bin/python" -e ".[dev,browser,live]" &&
     "$env/bin/python" -m playwright install chromium > /dev/null &&
-    "$env/bin/python" -m pytest -q -p no:cacheprovider tests/test_explorer_browser.py tests/test_pager_browser.py
+    "$env/bin/python" -m pytest -q -p no:cacheprovider tests/test_explorer_browser.py tests/test_pager_browser.py tests/test_live_browser.py
 }
 
 distributions_job() {

@@ -95,9 +95,12 @@ def test_a_real_kernel_sends_no_result_for_view():
 
         outputs(SETUP)
         assert outputs("df") == ["execute_result"]
-        assert outputs("table3.view(df)") == ["display_data"]
-        assert outputs("df >> Piped()") == ["display_data"]
-        assert outputs("table3.view(df); df") == ["display_data", "execute_result"]
+        # With anywidget the explorer is two outputs, its snapshot and the live widget.
+        explorer = outputs("table3.view(df)")
+        assert explorer in (["display_data"], ["display_data"] * 2)
+        assert outputs("table3.view(df, live=False)") == ["display_data"]
+        assert outputs("df >> Piped()") == explorer
+        assert outputs("table3.view(df); df") == explorer + ["execute_result"]
         assert outputs("df") == ["execute_result"]
     finally:
         kc.stop_channels()

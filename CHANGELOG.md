@@ -1,5 +1,47 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `view()` explores every row, not only the first *n*, where anywidget is
+  installed (`pip install table3[live]`) and the notebook draws Jupyter
+  widgets (JupyterLab, Notebook 7, VS Code): search, sort and filters run in
+  polars over the whole data, and the grid fetches the rows it scrolls to.
+  The first *n* rows are still saved with the notebook, so it reopens
+  without its kernel showing them, with a note that search and filters
+  cover only those. `view(live=False)` saves the rows alone, as before;
+  SolveIt, which draws no widgets, always gets them, and so does lazy
+  data unless `live=True` (live mode runs its whole query once): a polars
+  LazyFrame, or a package's frame that gives its whole data through a new
+  `__table3_source__()` method (a polars DataFrame or LazyFrame), as
+  tidy3's frames do.
+- The explorer profiles each column under its name and type, as marimo's
+  table does: a histogram for numbers, dates and times; the most common
+  values for text and booleans; and the distinct and missing counts. Faint
+  bars show all rows and solid bars the rows the search and filters keep,
+  updated as they change. The toolbar says what the profiles cover (every
+  row, the snapshot's rows, or a sample past a million rows, with
+  estimated distinct counts marked "≈"); the new Profile button hides them.
+- A Columns menu hides columns from the explorer and its exports, and an
+  Export menu writes every row the search and filters keep, in the grid's
+  order, whatever is in view: CSV with every stored digit, or, when live,
+  Parquet with the original types, downloaded or saved in the kernel's
+  folder.
+
+### Fixed
+
+- In SolveIt, `view()` hides its cell from the AI again, where SolveIt
+  tells it which cell is running: SolveIt no longer puts `__msg_id` in the
+  namespace, so `view()` now also asks dialoghelper for the current
+  message (`read_msg(n=0)`, as plot3 does), the request's `cellId`, and
+  SolveIt's gateway. When none of them says, it reports that
+  once a session rather than under every explorer. SolveIt is recognised
+  by the dialoghelper it loads into every kernel, so live mode stays off
+  there. Hiding needs SolveIt's own dialoghelper: a newer one installed
+  with `pip` shadows it and can't find the running cell, so remove that
+  copy rather than upgrading (docs/explorer.md §8).
+
 ## 0.6.1 — 2026-11-03
 
 ### Fixed

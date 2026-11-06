@@ -170,6 +170,7 @@ def view(
     digits: int | str | None = None,
     caption: str | None = None,
     hide: bool | None = None,
+    live: bool | None = None,
 ) -> Any:
     """Open a data explorer over the first *n* rows of *data*, and return *data*.
 
@@ -192,23 +193,56 @@ def view(
     fill its context. *hide* says whether to, for this call: ``True`` or
     ``False``; ``None`` follows ``table3.autohide()``, on by default.
     SolveIt hides the cell's code with its output.
+
+    *live* explores every row instead, through the kernel: search, filters
+    and sort run in Python over all of *data* and the grid fetches the rows
+    it scrolls to. It needs anywidget (``pip install table3[live]``) and a
+    notebook that draws Jupyter widgets (JupyterLab, Notebook 7, VS Code).
+    The first *n* rows are still written as a snapshot, which shows when
+    the notebook is reopened without its kernel. ``None`` (the default) is
+    live where it can be, for data already in memory (a polars or pandas
+    DataFrame or Series), but never in SolveIt, which draws no widgets;
+    lazy data, a polars LazyFrame or a package's frame that gives its data
+    through ``__table3_source__()`` (tidy3's), stays a snapshot, as live
+    mode would run its whole query. ``True`` insists (lazy data is then
+    collected once); ``False`` writes the snapshot alone.
     """
     _check(n, True, 10, height, digits)
     if hide is not None and not isinstance(hide, bool):
         raise TypeError("table3: hide must be True, False or None")
     if height is None:
         raise ValueError("table3: view() height must be a positive integer")
-    from table3._explore import explorer_html
+    if live is not None and not isinstance(live, bool):
+        raise TypeError("table3: live must be True, False or None")
+    from table3 import _live, _source
+    from table3._explore import explorer_html, new_uid
 
+    if live is None:
+        # Lazy data (a LazyFrame, or a package's frame through
+        # __table3_source__) stays a snapshot unless asked: live would run
+        # the whole query (a large scan, say) where the snapshot collects n rows.
+        live = _source.eager(data) and _live.available()
+    elif live and not _live.available():
+        raise RuntimeError(
+            "table3: view(live=True) needs anywidget (pip install table3[live]) "
+            "and a Jupyter kernel outside SolveIt"
+        )
     df, total, own_caption = _parts(data, n)
-    page = explorer_html(
-        df, total, own_caption if caption is None else caption,
-        n=n, height=height, digits=digits,
-    )
+    cap = own_caption if caption is None else caption
+    uid = new_uid()
+    page = explorer_html(df, total, cap, n=n, height=height, digits=digits, uid=uid, live=live)
+    widget = None
+    if live:
+        widget = _live.live_explorer(data, height=height, digits=digits, caption=cap, snapshot=uid)
     if not _display(page):
         print(_text(data, min(n, 20), digits))
-    elif _solveit.AUTOHIDE if hide is None else hide:
-        _solveit.hide_calling_cell()
+    else:
+        if widget is not None:
+            from IPython.display import display
+
+            display(widget)
+        if _solveit.AUTOHIDE if hide is None else hide:
+            _solveit.hide_calling_cell()
     _quiet.return_quietly(data)
     return data
 

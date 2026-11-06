@@ -46,6 +46,27 @@ the model's context; the cell's code is hidden with them. `view(hide=False)`
 keeps a cell visible, and `table3.autohide(False)` stops hiding for the
 session.
 
+Under each column's name and type a profile shows what it holds: a
+histogram of numbers and dates, the most common values of text, and how
+many distinct and missing values there are. Faint bars are all rows, solid
+ones the rows your search and filters keep. The Profile button hides them.
+
+**Columns** hides columns, and **Export** downloads every row your search
+and filters keep, in their order, as CSV (or Parquet in live mode, which can
+also save the file in the kernel's folder).
+
+With anywidget installed (`pip install table3[live]`), `view()` explores
+every row instead, through the kernel, as marimo's table and VS Code's Data
+Wrangler do: search, sort and filters run in polars over the whole data, and
+the grid fetches the rows you scroll to. It needs a notebook that draws
+Jupyter widgets (JupyterLab, Notebook 7, VS Code). The first *n* rows are
+still saved with the notebook, so reopened without its kernel it shows them,
+and says that search and filters cover only those. `view(live=False)` saves
+the rows alone; SolveIt, which draws no widgets, always gets them. Lazy data, a
+polars LazyFrame or a tidy3 frame, stays a snapshot of its first *n* rows
+unless you pass `live=True`, since exploring it live runs the whole query
+once.
+
 `show()` and `view()` return what they were given, so they can sit in the
 middle of a pipe.
 As a cell's last line the notebook also prints that value; end the line with

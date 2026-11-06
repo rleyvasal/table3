@@ -38,6 +38,12 @@ cells = [
              ")\n"
              "table3.view(dated);"),
     ("code", "table3.view(pl.DataFrame({\"x\": range(10_000)}), height=300);"),
+    ("md", "## Live explorer (pip install table3[live]): every row, through the kernel\n"
+           "Search, sort and filter cover all 2,000,000 rows. Reopen the notebook without its "
+           "kernel: the first 1,000 rows show instead, and the status line says so."),
+    ("code", "big = pl.DataFrame({\"x\": range(2_000_000)}).with_columns(\n"
+             "    s=pl.format(\"item {}\", \"x\"), half=pl.col(\"x\") / 2)\n"
+             "table3.view(big, n=1000);"),
     ("md", "## Viewing returns the data unchanged"),
     ("code", "before = penguins.clone()\ntable3.show(penguins).equals(before)"),
 ]
