@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- A column's profile shows its missing count on a line of its own, under
+  the distinct count, where narrow columns cut it short before; text
+  columns are wide enough for both.
+
 ## 0.7.0 — 2026-11-05
 
 ### Added

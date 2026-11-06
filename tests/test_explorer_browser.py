@@ -287,6 +287,7 @@ PROFILED = pl.DataFrame({
 PROFILE_DOM = """() => [...document.querySelectorAll('[data-grid] td[data-profile]')].map(td => ({
   name: td.dataset.profile,
   stats: (td.querySelector('[data-stats]') || {}).textContent,
+  missing: (td.querySelector('[data-missing]') || {}).textContent,
   title: td.title,
   bars: Object.fromEntries([...td.querySelectorAll('rect[data-bin]')].map(
     r => [r.dataset.bin, +r.getAttribute('height')]))}))"""
@@ -297,9 +298,8 @@ def expected_profiles(source, request):
     base, now = source.profile({}), source.profile(request)
     out = {}
     for col, lay, b, p in zip(source.columns, source.layouts, base["columns"], now["columns"]):
-        stats = f"{'≈' if p['approx'] else ''}{p['distinct']:,} distinct"
-        if p["missing"]:
-            stats += f" · {p['missing']:,} missing"
+        stats = (f"{'≈' if p['approx'] else ''}{p['distinct']:,} distinct",
+                 f"{p['missing']:,} missing" if p["missing"] else "\u00a0")
         if lay["type"] == "hist":
             most = max([1] + b["bins"])
             bars = {str(i): n / most for i, n in enumerate(p["bins"]) if n}
@@ -317,7 +317,7 @@ def _check_profiles(page, source, request):
     want = expected_profiles(source, request)
     for got in page.evaluate(PROFILE_DOM):
         stats, bars, tops = want[got["name"]]
-        assert got["stats"] == stats, got["name"]
+        assert (got["stats"], got["missing"]) == stats, got["name"]
         assert got["bars"].keys() == bars.keys(), got["name"]
         assert all(abs(got["bars"][k] - bars[k]) < 1e-9 for k in bars), got["name"]
         if tops:

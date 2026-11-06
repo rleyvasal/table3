@@ -61,7 +61,9 @@ function table3Explorer(root, data, remote) {
   // Column widths in characters, from the widest text up to the cut.
   var widths = cols.map(function (col, c) {
     // Numbers and dates need room for their filter's from and to boxes.
-    var w = Math.max(col.name.length + 2, col.type.length, NUMERIC[col.kind] ? 12 : 6);
+    // A profiled column needs room for "128 distinct" and "5 missing".
+    var w = Math.max(col.name.length + 2, col.type.length,
+      NUMERIC[col.kind] ? 12 : data.layouts && data.layouts.length ? 10 : 6);
     for (var r = 0; r < sample.length && w < CUT; r++) w = Math.max(w, sample[r][c].length);
     return Math.min(w, CUT);
   });
@@ -588,11 +590,14 @@ function table3Explorer(root, data, remote) {
           segs + "</div><div style='opacity:.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>" +
           esc(lay.values.slice(0, 2).join(", ")) + "</div>";
       }
-      var stats = (now.approx ? "≈" : "") + fmt(now.distinct) + " distinct" +
-        (now.missing ? " · " + fmt(now.missing) + " missing" : "");
-      html += "<div data-stats style='opacity:.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>" +
-        stats + "</div>";
-      tip.push(stats);
+      // Distinct and missing on lines of their own, so narrow columns keep
+      // both; the missing line stays, blank, so every profile is one height.
+      var LINE = "opacity:.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";
+      var stats = (now.approx ? "≈" : "") + fmt(now.distinct) + " distinct";
+      var missing = now.missing ? fmt(now.missing) + " missing" : "";
+      html += "<div data-stats style='" + LINE + "'>" + stats + "</div>" +
+        "<div data-missing style='" + LINE + "'>" + (missing || "&nbsp;") + "</div>";
+      tip.push(stats + (missing ? " · " + missing : ""));
       td.innerHTML = html;
       td.title = tip.join("\n");
     });
